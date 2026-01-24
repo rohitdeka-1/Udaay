@@ -1,0 +1,12 @@
+server:
+  port: ${SERVER_PORT:5000}
+
+gemini:
+  project-id: ${GEMINI_PROJECT_ID}
+  location: ${GEMINI_LOCATION}
+  model: ${GEMINI_MODEL}
+  service-account-file: ${GEMINI_SERVICE_ACCOUNT_FILE}
+
+internal:
+  jwt:
+    secret: ${INTERNAL_JWT_SECRET}
