@@ -3,7 +3,7 @@ import { uploadToGCS, uploadBase64ToGCS, deleteFromGCS, isGCSConfigured } from "
 
 export const getMe = async (req, res) => {
     try {
-        // Handle both req.user._id and req.user.userId (from JWT token)
+        
         const userId = req.user._id || req.user.userId;
         
         const user = await User.findById(userId).select('-password');
@@ -50,23 +50,23 @@ export const getMe = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
-        // Handle both req.user._id and req.user.userId (from JWT token)
+         
         const userId = req.user._id || req.user.userId;
         const { name, city } = req.body;
         let updateData = { name, city };
 
-        // Handle profile picture upload
+        
         if (req.file) {
             const user = await User.findById(userId);
             
             if (isGCSConfigured()) {
                 try {
-                    // Delete old profile picture if exists
+                   
                     if (user.profilePicture && !user.profilePicture.startsWith('data:')) {
                         await deleteFromGCS(user.profilePicture);
                     }
 
-                    // Upload new profile picture
+                     
                     const profilePictureUrl = await uploadToGCS(
                         req.file.buffer,
                         req.file.originalname,
@@ -81,13 +81,13 @@ export const updateProfile = async (req, res) => {
                     updateData.profilePicture = base64Image;
                 }
             } else {
-                // Fallback: Convert buffer to base64 if GCS not configured
+                
                 const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
                 updateData.profilePicture = base64Image;
                 console.log('GCS not configured - using base64 storage for profile picture');
             }
         }
-        // Handle base64 profile picture
+       
         else if (req.body.profilePicture && req.body.profilePicture.startsWith('data:image')) {
             if (isGCSConfigured()) {
                 try {
@@ -104,7 +104,7 @@ export const updateProfile = async (req, res) => {
                     updateData.profilePicture = req.body.profilePicture;
                 }
             } else {
-                // If GCS not configured, keep the base64 as is
+                
                 updateData.profilePicture = req.body.profilePicture;
             }
         }

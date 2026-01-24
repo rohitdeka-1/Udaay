@@ -10,9 +10,22 @@ import issueRoutes from "./routes/issue.routes.js";
 
 const app = express();
 const PORT = config.PORT;
+const isProduction = config.NODE_ENV === 'production';
+
+ const allowedOrigins = isProduction 
+    ? [config.CLIENT_URL, process.env.FRONTEND_URL].filter(Boolean)
+    : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:8080', 'http://127.0.0.1:8081'];
 
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:8080', 'http://127.0.0.1:8081'],
+    origin: (origin, callback) => {
+         if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.includes(origin) || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -31,10 +44,27 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 
+if (!isProduction) {
+    app.use((req, res, next) => {
+        console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+        next();
+    });
+}
+
+app.get("/health", (req, res) => {
+    res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: config.NODE_ENV
+    });
+});
+
 app.get("/", (req, res) => {
     res.status(200).json({
         success: true,
-        message: "LakeCity API Server is running",
+        message: "Udaay API Server is running",
+        version: "1.0.0",
         timestamp: new Date().toISOString()
     });
 });
@@ -51,21 +81,70 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error(' Error:', err.message);
+    if (!isProduction) {
+        console.error(err.stack);
+    }
+    
     res.status(err.status || 500).json({
         success: false,
-        message: err.message || "Internal server error",
-        error: config.NODE_ENV === "dev" ? err : {}
+        message: isProduction ? 'Internal server error' : err.message,
+        ...((!isProduction && err.stack) && { stack: err.stack })
     });
 });
 
-await connectDb()
-.then(()=>{
-    app.listen(PORT,()=>{
-        console.log(`Server running: http://localhost:${PORT}`);
-        console.log(`Environment: ${config.NODE_ENV}`);
-    })
-})
-.catch((err)=>{
-    console.log("Error Running server:", err);
-})
+let server;
+
+try {
+    await connectDb();
+    console.log('✅ Database connected successfully');
+    
+    server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`📍 Environment: ${config.NODE_ENV}`);
+        console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+        if (!isProduction) {
+            console.log(`📡 API: http://localhost:${PORT}`);
+        }
+    });
+} catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+}
+
+const gracefulShutdown = async (signal) => {
+    console.log(`\n${signal} received. Starting graceful shutdown...`);
+    
+    if (server) {
+        server.close(async () => {
+            console.log('✅ HTTP server closed');
+            
+            try {
+                await import('mongoose').then(mongoose => mongoose.default.connection.close());
+                console.log('✅ Database connection closed');
+                process.exit(0);
+            } catch (err) {
+                console.error('❌ Error during shutdown:', err);
+                process.exit(1);
+            }
+        });
+        
+        setTimeout(() => {
+            console.error('⚠️  Forced shutdown after timeout');
+            process.exit(1);
+        }, 10000);
+    }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+process.on('uncaughtException', (err) => {
+    console.error('❌ Uncaught Exception:', err);
+    gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    gracefulShutdown('unhandledRejection');
+});

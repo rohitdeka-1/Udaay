@@ -1,9 +1,7 @@
 import multer from 'multer';
 
-// Configure multer to use memory storage (store in buffer)
-const storage = multer.memoryStorage();
-
-// File filter to allow only images
+ const storage = multer.memoryStorage();
+ 
 const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
     
@@ -14,16 +12,16 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Configure multer
+ 
 const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB max file size
+        fileSize: 10 * 1024 * 1024,  
     }
 });
 
-// Middleware for single file upload
+ 
 export const uploadSingle = (fieldName) => {
     return (req, res, next) => {
         const uploadMiddleware = upload.single(fieldName);
@@ -51,7 +49,7 @@ export const uploadSingle = (fieldName) => {
     };
 };
 
-// Middleware for multiple file uploads
+ 
 export const uploadMultiple = (fieldName, maxCount = 5) => {
     return (req, res, next) => {
         const uploadMiddleware = upload.array(fieldName, maxCount);

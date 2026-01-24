@@ -2,14 +2,14 @@ import Issue from "../models/issue.model.js";
 import { validateIssueWithAI, getLocationDetails } from "../services/ai.service.js";
 import { uploadToGCS, uploadBase64ToGCS, isGCSConfigured } from "../services/storage.service.js";
 
-// Submit new issue
+ 
 export const submitIssue = async (req, res) => {
     try {
         let { title, description, category, location } = req.body;
-        const userId = req.user.userId; // JWT contains userId, not _id
+        const userId = req.user.userId; 
         let imageUrl = req.body.imageUrl;
 
-        // Parse location if it's a JSON string (from FormData)
+      
         if (typeof location === 'string') {
             try {
                 location = JSON.parse(location);
@@ -21,8 +21,7 @@ export const submitIssue = async (req, res) => {
             }
         }
 
-        // Handle file upload from multipart form data
-        if (req.file) {
+         if (req.file) {
             if (isGCSConfigured()) {
                 try {
                     imageUrl = await uploadToGCS(
@@ -32,29 +31,26 @@ export const submitIssue = async (req, res) => {
                         req.file.mimetype
                     );
                 } catch (gcsError) {
-                    // Fallback to base64 if GCS upload fails
-                    console.log('GCS upload failed, falling back to base64:', gcsError.message);
+                     console.log('GCS upload failed, falling back to base64:', gcsError.message);
                     const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
                     imageUrl = base64Image;
                 }
             } else {
-                // Fallback: Convert buffer to base64 if GCS not configured
-                const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+                 const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
                 imageUrl = base64Image;
                 console.log('GCS not configured - using base64 storage');
             }
         }
-        // Handle base64 image upload
-        else if (imageUrl && imageUrl.startsWith('data:image')) {
+         else if (imageUrl && imageUrl.startsWith('data:image')) {
             if (isGCSConfigured()) {
                 try {
                     imageUrl = await uploadBase64ToGCS(imageUrl, 'issues');
                 } catch (gcsError) {
                     console.log('GCS upload failed, keeping base64:', gcsError.message);
-                    // Keep the base64 as is if GCS fails
+                     
                 }
             }
-            // If GCS not configured, keep the base64 as is
+     
         }
 
         if (!title || !description || !category || !imageUrl || !location) {
@@ -66,11 +62,9 @@ export const submitIssue = async (req, res) => {
 
         const { lat, lng } = location;
 
-        // Get location details from coordinates
-        const locationDetails = await getLocationDetails(lat, lng);
+         const locationDetails = await getLocationDetails(lat, lng);
 
-        // Create issue with pending status
-        const issue = await Issue.create({
+         const issue = await Issue.create({
             userId,
             title,
             description,
@@ -86,8 +80,7 @@ export const submitIssue = async (req, res) => {
             status: "pending"
         });
 
-        // Start AI validation in background
-        validateAndUpdateIssue(issue._id, imageUrl, description, category);
+         validateAndUpdateIssue(issue._id, imageUrl, description, category);
 
         res.status(201).json({
             success: true,
@@ -103,8 +96,7 @@ export const submitIssue = async (req, res) => {
     }
 };
 
-// Background AI validation
-async function validateAndUpdateIssue(issueId, imageUrl, description, category) {
+ async function validateAndUpdateIssue(issueId, imageUrl, description, category) {
     try {
         const validation = await validateIssueWithAI(imageUrl, description, category);
 
@@ -118,8 +110,7 @@ async function validateAndUpdateIssue(issueId, imageUrl, description, category) 
             confidenceScore: validation.confidence
         };
 
-        // If AI validates the image matches description, change status to live
-        if (validation.matchesDescription && validation.confidence > 0.7) {
+         if (validation.matchesDescription && validation.confidence > 0.7) {
             updateData.status = "live";
         } else {
             updateData.status = "rejected";
@@ -128,30 +119,26 @@ async function validateAndUpdateIssue(issueId, imageUrl, description, category) 
         await Issue.findByIdAndUpdate(issueId, updateData);
     } catch (error) {
         console.error("Error in validateAndUpdateIssue:", error);
-        // Keep status as pending if validation fails
+        
     }
 }
 
-// Get live issues (for map and issues list)
-export const getLiveIssues = async (req, res) => {
+ export const getLiveIssues = async (req, res) => {
     const startTime = Date.now();
     try {
-        const { lat, lng, radius = 10000, category } = req.query; // radius in meters (default 10km)
+        const { lat, lng, radius = 10000, category } = req.query;  
 
         let query = { status: "live" };
 
-        // Filter by category if provided
-        if (category && category !== 'all') {
+         if (category && category !== 'all') {
             query.category = category;
         }
 
         let issues;
 
-        // Select only necessary fields for list view - include imageUrl
-        const selectFields = '_id title description category status imageUrl location severity upvotes createdAt aiValidation.validated aiValidation.confidence detectedCategory';
+         const selectFields = '_id title description category status imageUrl location severity upvotes createdAt aiValidation.validated aiValidation.confidence detectedCategory';
 
-        // If location provided, find nearby issues
-        if (lat && lng) {
+         if (lat && lng) {
             issues = await Issue.find({
                 ...query,
                 location: {
@@ -169,8 +156,7 @@ export const getLiveIssues = async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(100);
         } else {
-            // Get all live issues
-            issues = await Issue.find(query)
+             issues = await Issue.find(query)
                 .select(selectFields)
                 .lean()
                 .sort({ createdAt: -1 })
@@ -191,10 +177,9 @@ export const getLiveIssues = async (req, res) => {
     }
 };
 
-// Get user's issues
-export const getUserIssues = async (req, res) => {
+ export const getUserIssues = async (req, res) => {
     try {
-        const userId = req.user.userId; // JWT contains userId, not _id
+        const userId = req.user.userId; 
         const { status } = req.query;
 
         let query = { userId };
@@ -279,14 +264,12 @@ export const upvoteIssue = async (req, res) => {
     }
 };
 
-// Delete issue (only by owner)
-export const deleteIssue = async (req, res) => {
+ export const deleteIssue = async (req, res) => {
     try {
         const { id } = req.params;
         const userId = req.user.userId || req.user._id;
 
-        // Find issue
-        const issue = await Issue.findById(id);
+         const issue = await Issue.findById(id);
 
         if (!issue) {
             return res.status(404).json({
@@ -295,16 +278,14 @@ export const deleteIssue = async (req, res) => {
             });
         }
 
-        // Check if user is the owner
-        if (issue.userId.toString() !== userId.toString()) {
+         if (issue.userId.toString() !== userId.toString()) {
             return res.status(403).json({
                 success: false,
                 message: "You can only delete your own issues"
             });
         }
 
-        // Delete the issue
-        await Issue.findByIdAndDelete(id);
+         await Issue.findByIdAndDelete(id);
 
         res.status(200).json({
             success: true,
