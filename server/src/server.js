@@ -44,12 +44,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 
-if (!isProduction) {
-    app.use((req, res, next) => {
-        console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-        next();
-    });
-}
+// Enable request logging for all environments to aid debugging
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+});
 
 app.get("/health", (req, res) => {
     res.status(200).json({
