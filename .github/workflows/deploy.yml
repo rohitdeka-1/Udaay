@@ -96,6 +96,12 @@ jobs:
           GEMINI_LOCATION=${{ secrets.GEMINI_LOCATION }}
           GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}
           INTERNAL_JWT_SECRET=${{ secrets.INTERNAL_JWT_SECRET }}
+          FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_PRIVATE_KEY_ID=${{ secrets.FIREBASE_PRIVATE_KEY_ID }}
+          FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}
+          FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_CLIENT_ID=${{ secrets.FIREBASE_CLIENT_ID }}
+          FIREBASE_CERT_URL=${{ secrets.FIREBASE_CERT_URL }}
           EOF
 
       - name: Copy files to VM
