@@ -12,6 +12,13 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Build argument for API URL
+ARG VITE_API_URL=http://34.100.170.102:8080
+ENV VITE_API_URL=$VITE_API_URL
+
+ARG VITE_GOOGLE_MAPS_API_KEY
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+
 # Build the application
 RUN npm run build
 

@@ -35,6 +35,9 @@ jobs:
           context: ./client
           file: ./client/Dockerfile
           push: true
+          build-args: |
+            VITE_API_URL=http://34.100.170.102:8080
+            VITE_GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}
           tags: |
             ${{ secrets.DOCKER_HUB_USERNAME }}/lakecity-client:latest
             ${{ secrets.DOCKER_HUB_USERNAME }}/lakecity-client:${{ github.sha }}
