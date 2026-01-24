@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Camera, Upload, MapPin, ChevronRight, Check, AlertTriangle, Trash2, Droplet, Zap, X, Sparkles } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useNavigate } from "react-router-dom";
+import { getApiUrl } from "@/lib/utils";
 
 const categories = [
   { id: "roads", icon: AlertTriangle, label: "Road Damage", color: "bg-warning/10 text-warning" },
@@ -37,17 +38,27 @@ const ReportScreen = () => {
           setUserLocation(location);
           
           // Reverse geocode to get location name
-          fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.lat},${location.lng}&key=AIzaSyCfLUe8Zr8pL4YfP2pdKYAPUrbK7mLz9qw`)
-            .then(res => res.json())
-            .then(data => {
-              if (data.results && data.results[0]) {
-                setLocationName(data.results[0].formatted_address);
-              }
-            })
-            .catch(() => setLocationName("Location unavailable"));
+          const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+          if (apiKey) {
+            fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.lat},${location.lng}&key=${apiKey}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data.results && data.results[0]) {
+                  setLocationName(data.results[0].formatted_address);
+                }
+              })
+              .catch(() => setLocationName("Location unavailable"));
+          } else {
+            setLocationName("Location tagged");
+          }
         },
-        () => {
-          setLocationName("Location unavailable");
+        (error) => {
+          // Silently handle location permission denial
+          if (error.code === 1) {
+            setLocationName("Enable location access");
+          } else {
+            setLocationName("Location unavailable");
+          }
         }
       );
     }
@@ -99,7 +110,7 @@ const ReportScreen = () => {
         formData.append("imageUrl", image);
       }
 
-      const response = await fetch("http://localhost:8000/api/issues/submit", {
+      const response = await fetch(`${getApiUrl()}/issues/submit`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`

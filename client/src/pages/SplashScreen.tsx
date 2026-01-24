@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import citySkyline from "@/assets/city-skyline.png";
+import { getApiUrl } from "@/lib/utils";
 
 const SplashScreen = () => {
   const navigate = useNavigate();
@@ -24,14 +25,14 @@ const SplashScreen = () => {
  
           setStatus("Loading user data...");
           try {
-            const response = await fetch("http://localhost:8000/api/user/me", {
+            const response = await fetch(`${getApiUrl()}/user/me`, {
               headers: { "Authorization": `Bearer ${token}` }
             });
             
             if (response.ok) {
               setStatus("Loading map data...");
      
-              await fetch("http://localhost:8000/api/issues/live");
+              await fetch(`${getApiUrl()}/issues/live`);
             }
           } catch (error) {
             // Token verification failed, continuing to home

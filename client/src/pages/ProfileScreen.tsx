@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/utils";
 
 const activityItems = [
   { icon: Clock, label: "My Contributions", path: "/tickets" },
@@ -34,7 +35,7 @@ const ProfileScreen = () => {
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/api/user/me', {
+      const response = await fetch(`${getApiUrl()}/user/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -85,7 +86,7 @@ const ProfileScreen = () => {
       formData.append('profilePicture', file);
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/api/user/update-profile', {
+      const response = await fetch(`${getApiUrl()}/user/update-profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`

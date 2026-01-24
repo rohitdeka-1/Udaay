@@ -4,6 +4,7 @@ import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +59,7 @@ const TicketsScreen = () => {
   const fetchMyIssues = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:8000/api/issues/my-issues", {
+      const response = await fetch(`${getApiUrl()}/issues/my-issues`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -96,7 +97,7 @@ const TicketsScreen = () => {
     setDeleting(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:8000/api/issues/${issueToDelete}`, {
+      const response = await fetch(`${getApiUrl()}/issues/${issueToDelete}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`

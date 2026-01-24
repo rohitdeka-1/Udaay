@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { MapPin, Calendar, ArrowLeft, AlertTriangle, Trash2, Droplet, Zap, FileText } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { getApiUrl } from "@/lib/utils";
 
 const IssueDetailScreen = () => {
   const { id } = useParams();
@@ -106,7 +107,7 @@ const IssueDetailScreen = () => {
     const fetchIssueDetail = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(`http://localhost:8000/api/issues/${id}`, {
+        const response = await fetch(`${getApiUrl()}/issues/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

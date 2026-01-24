@@ -52,7 +52,9 @@ const MapScreen = () => {
   // Fetch live issues from API
   const fetchLiveIssues = async (lat?: number, lng?: number) => {
     try {
-      let url = "http://localhost:8000/api/issues/live";
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+      const baseUrl = API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`;
+      let url = `${baseUrl}/issues/live`;
       if (lat && lng) {
         url += `?lat=${lat}&lng=${lng}&radius=10000`; // 10km radius
       }
@@ -294,7 +296,9 @@ const MapScreen = () => {
             // Add nearby live issues from API
             createIssueMarkers(map, userLoc);
           },
-          () => {
+          (error) => {
+            // Silently handle location permission denial - app works without location
+            console.log("Location access:", error.code === 1 ? "denied" : "unavailable");
             // Fallback - load issues without location filter
             createIssueMarkers(map);
           },
@@ -468,12 +472,9 @@ const MapScreen = () => {
         }
       },
       (error) => {
-        const messages: Record<number, string> = {
-          [error.PERMISSION_DENIED]: "Location permission denied. Please enable location access in your browser settings.",
-          [error.POSITION_UNAVAILABLE]: "Location information is unavailable.",
-          [error.TIMEOUT]: "Location request timed out."
-        };
-        alert(messages[error.code] || "Unable to get your location.");
+        // Silently handle location permission denial - don't show alert
+        console.log("Location access:", error.code === 1 ? "denied" : "unavailable");
+        // App continues to work without location
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );

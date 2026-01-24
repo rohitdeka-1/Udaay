@@ -14,7 +14,7 @@ export const AppHeader = ({ showCitySelector = false, title }: AppHeaderProps) =
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get user data from localStorage
+   
     const storedUser = getStoredUser();
     setUser(storedUser);
 
@@ -53,8 +53,12 @@ export const AppHeader = ({ showCitySelector = false, title }: AppHeaderProps) =
           }
         },
         (error) => {
-          console.error("Geolocation error:", error);
-          setCity("Location unavailable");
+          // Silently handle location permission denial
+          if (error.code === 1) {
+            setCity("Enable location");
+          } else {
+            setCity("Location unavailable");
+          }
         },
         { timeout: 5000 }
       );

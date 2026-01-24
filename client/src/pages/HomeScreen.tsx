@@ -3,6 +3,7 @@ import { Search, MapPin, AlertTriangle, Droplet, Trash2, Zap, FileText, X } from
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { getApiUrl } from "@/lib/utils";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -29,7 +30,7 @@ const HomeScreen = () => {
   useEffect(() => {
     const fetchIssues = async () => {
       try {
-        const url = "http://localhost:8000/api/issues/live";
+        const url = `${getApiUrl()}/issues/live`;
         const response = await fetch(url);
         const data = await response.json();
 
@@ -57,7 +58,8 @@ const HomeScreen = () => {
           });
         },
         (error) => {
-          console.error("Error getting location:", error);
+          // Silently handle location permission denial - app works without location
+          console.log("Location access:", error.code === 1 ? "denied" : "unavailable");
         },
         { timeout: 5000, maximumAge: 60000 }  
       );
@@ -68,7 +70,7 @@ const HomeScreen = () => {
     if (userLocation && hasInitialLoad) {
       const fetchNearbyIssues = async () => {
         try {
-          const url = `http://localhost:8000/api/issues/live?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=10000`;
+          const url = `${getApiUrl()}/issues/live?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=10000`;
           const response = await fetch(url);
           const data = await response.json();
 
