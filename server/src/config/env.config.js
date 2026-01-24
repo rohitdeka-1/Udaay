@@ -11,7 +11,9 @@ const config = {
     GOOGLE_CLOUD_PROJECT_ID: process.env.GOOGLE_CLOUD_PROJECT_ID,
     GOOGLE_CLOUD_BUCKET_NAME: process.env.GOOGLE_CLOUD_BUCKET_NAME,
     GOOGLE_CLOUD_KEY_FILE: process.env.GOOGLE_CLOUD_KEY_FILE,
-    CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173"
+    CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
+    AI_BACKEND_URL: process.env.AI_BACKEND_URL || "http://localhost:5000",
+    INTERNAL_JWT_SECRET: process.env.INTERNAL_JWT_SECRET
 }
 
  if (config.NODE_ENV === 'production') {

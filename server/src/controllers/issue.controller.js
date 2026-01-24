@@ -1,6 +1,7 @@
 import Issue from "../models/issue.model.js";
 import { validateIssueWithAI, getLocationDetails } from "../services/ai.service.js";
 import { uploadToGCS, uploadBase64ToGCS, isGCSConfigured } from "../services/storage.service.js";
+import { validateWithAIBackend, mapAIResponse } from "../services/ai-backend.service.js";
 
  
 export const submitIssue = async (req, res) => {
@@ -62,9 +63,11 @@ export const submitIssue = async (req, res) => {
 
         const { lat, lng } = location;
 
-         const locationDetails = await getLocationDetails(lat, lng);
+        // Get location details
+        const locationDetails = await getLocationDetails(lat, lng);
 
-         const issue = await Issue.create({
+        // Create issue with "pending" status
+        const issue = await Issue.create({
             userId,
             title,
             description,
@@ -77,10 +80,17 @@ export const submitIssue = async (req, res) => {
                 lng,
                 ...locationDetails
             },
-            status: "pending"
+            status: "pending" // Start with pending status
         });
 
-         validateAndUpdateIssue(issue._id, imageUrl, description, category);
+        // Send to Spring Boot AI backend for validation (async)
+        // Store image buffer and metadata for AI validation
+        if (req.file) {
+            validateWithSpringBootAI(issue._id, req.file.buffer, req.file.originalname, req.file.mimetype);
+        } else {
+            // Fallback to old AI service if no file buffer
+            validateAndUpdateIssue(issue._id, imageUrl, description, category);
+        }
 
         res.status(201).json({
             success: true,
@@ -96,7 +106,66 @@ export const submitIssue = async (req, res) => {
     }
 };
 
- async function validateAndUpdateIssue(issueId, imageUrl, description, category) {
+/**
+ * Validate issue with Spring Boot AI backend
+ * This runs asynchronously after issue creation
+ */
+async function validateWithSpringBootAI(issueId, imageBuffer, imageName, mimeType) {
+    try {
+        console.log(`🤖 Sending issue ${issueId} to Spring Boot AI backend...`);
+        
+        // Send image to Spring Boot AI backend
+        const aiResult = await validateWithAIBackend(imageBuffer, imageName, mimeType);
+        
+        if (aiResult.success && aiResult.data) {
+            console.log(`✅ AI validation successful for issue ${issueId}`);
+            
+            // Map AI response to our format
+            const validation = mapAIResponse(aiResult.data);
+            
+            const updateData = {
+                'aiValidation.validated': true,
+                'aiValidation.confidence': validation.confidence,
+                'aiValidation.validatedAt': new Date(),
+                'aiValidation.matchesDescription': validation.matchesDescription,
+                'aiValidation.aiResponse': validation.aiResponse,
+                detectedCategory: validation.detectedCategory,
+                confidenceScore: validation.confidence,
+                severity: validation.severity
+            };
+
+            // Change status to "live" if validation passed
+            if (validation.matchesDescription && validation.confidence > 0.6) {
+                updateData.status = "live";
+                console.log(`✅ Issue ${issueId} approved and set to LIVE`);
+            } else {
+                updateData.status = "rejected";
+                console.log(`❌ Issue ${issueId} rejected by AI`);
+            }
+
+            await Issue.findByIdAndUpdate(issueId, updateData);
+        } else {
+            // Fallback: If AI backend fails, keep as pending or use fallback validation
+            console.log(`⚠️ AI backend failed for issue ${issueId}, keeping as pending`);
+            
+            // Optional: Auto-approve after timeout or keep pending for manual review
+            // await Issue.findByIdAndUpdate(issueId, { status: "live" });
+        }
+    } catch (error) {
+        console.error(`❌ Error validating issue ${issueId}:`, error);
+        
+        // Keep issue as pending on error
+        await Issue.findByIdAndUpdate(issueId, {
+            'aiValidation.validated': false,
+            'aiValidation.aiResponse': 'AI validation failed - pending manual review'
+        });
+    }
+}
+
+/**
+ * Fallback validation using old AI service
+ */
+async function validateAndUpdateIssue(issueId, imageUrl, description, category) {
     try {
         const validation = await validateIssueWithAI(imageUrl, description, category);
 
