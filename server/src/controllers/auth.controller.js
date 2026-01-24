@@ -8,16 +8,8 @@ export const loginWithFirebase = async (req, res) => {
 
         let decodedToken;
         
-        if (!idToken && phone) {
-            console.log("DEV MODE: Bypassing Firebase verification - phone login");
-            
-            decodedToken = {
-                uid: `dev_${phone}`,
-                phone_number: phone,
-                email: email || `${phone}@dev.com`,
-                name: name || "Test User"
-            };
-        } else if (!firebaseInitialized) {
+        if (!firebaseInitialized) {
+            // Fallback to dev mode only if Firebase is not initialized
             console.log("DEV MODE: Firebase not initialized");
             
             if (!phone) {
@@ -34,6 +26,7 @@ export const loginWithFirebase = async (req, res) => {
                 name: name || "Test User"
             };
         } else {
+            // Firebase is initialized - require idToken
             if (!idToken) {
                 return res.status(400).json({
                     success: false,
