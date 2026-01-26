@@ -21,22 +21,37 @@ public class AiController {
 
     @PostMapping("/verify")
     public ResponseEntity<IssueResponse> verifyIssue(@RequestParam("image") MultipartFile image) throws Exception {
-        System.out.println(" Received image validation request from Node.js");
-        System.out.println("   - Original filename: " + image.getOriginalFilename());
-        System.out.println("   - Content type: " + image.getContentType());
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println("🔄 RECEIVED IMAGE VALIDATION REQUEST FROM NODE.JS");
+        System.out.println("=".repeat(60));
+        System.out.println("📦 Image Details:");
+        System.out.println("   - Filename: " + image.getOriginalFilename());
+        System.out.println("   - Content-Type: " + image.getContentType());
         System.out.println("   - Size: " + image.getSize() + " bytes");
         System.out.println("   - Empty: " + image.isEmpty());
 
         if (image.isEmpty()) {
-            System.err.println(" ERROR: Received empty image file!");
+            System.err.println("\n❌ ERROR: Received empty image file!");
             throw new Exception("Image file is empty");
         }
 
+        System.out.println("\n🤖 Starting Gemini analysis...");
+        long startTime = System.currentTimeMillis();
+
         IssueResponse response = geminiService.analyze(image);
-        System.out.println(" AI Analysis complete:");
-        System.out.println("   - Issue: " + response.getIssue());
+
+        long duration = System.currentTimeMillis() - startTime;
+
+        System.out.println("\n✅ AI ANALYSIS COMPLETE:");
+        System.out.println("   - Issue Type: " + response.getIssue());
         System.out.println("   - Priority: " + response.getPriority());
-        System.out.println("   - Confidence reason: " + response.getConfidence_reason());
+        System.out.println("   - Confidence: " + response.getConfidence_reason());
+        System.out.println("   - Processing Time: " + duration + "ms");
+
+        System.out.println("\n📤 Sending response back to Node.js:");
+        System.out.println("   - Status: 200 OK");
+        System.out.println("   - Body: " + response.toString());
+        System.out.println("=".repeat(60) + "\n");
 
         return ResponseEntity.ok(response);
     }

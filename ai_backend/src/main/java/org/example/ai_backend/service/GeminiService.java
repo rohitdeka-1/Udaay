@@ -1,15 +1,23 @@
 package org.example.ai_backend.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.example.ai_backend.dto.IssueResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class GeminiService {
@@ -45,25 +53,7 @@ public class GeminiService {
         String base64Image = Base64.getEncoder().encodeToString(image.getBytes());
 
         // ✅ Prompt (make Gemini return only JSON)
-        String prompt = """
-                You are a civic issue verification AI.
-
-                Based on the detected objects and image description,
-                classify the issue as one of:
-                [Garbage, Pothole, Drainage, Streetlight, WaterLeak]
-
-                If the image does not clearly show a civic issue,
-                respond with: INVALID
-
-                Also assign priority: High / Medium / Low
-
-                Output STRICT JSON ONLY in this format:
-                {
-                  "issue": "...",
-                  "confidence_reason": "...",
-                  "priority": "..."
-                }
-                """;
+        String prompt = getPrompt();
 
         // ✅ Build JSON request for Vertex Gemini
         Map<String, Object> inlineData = new HashMap<>();
@@ -97,6 +87,8 @@ public class GeminiService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
+        System.out.println("📤 Sending request to Vertex AI endpoint...");
+
         ResponseEntity<String> response = restTemplate.exchange(
                 endpoint,
                 HttpMethod.POST,
@@ -104,6 +96,32 @@ public class GeminiService {
                 String.class
         );
 
+        return parseResponse(response);
+    }
+
+    private String getPrompt() {
+        return """
+                You are a civic issue verification AI.
+
+                Based on the detected objects and image description,
+                classify the issue as one of:
+                [Garbage, Pothole, Drainage, Streetlight, WaterLeak]
+
+                If the image does not clearly show a civic issue,
+                respond with: INVALID
+
+                Also assign priority: High / Medium / Low
+
+                Output STRICT JSON ONLY in this format:
+                {
+                  "issue": "...",
+                  "confidence_reason": "...",
+                  "priority": "..."
+                }
+                """;
+    }
+
+    private IssueResponse parseResponse(ResponseEntity<String> response) throws Exception {
         if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
             throw new RuntimeException("Gemini API failed: " + response.getStatusCode());
         }
@@ -132,6 +150,8 @@ public class GeminiService {
             issueResponse.setPriority("Low");
             issueResponse.setConfidence_reason("Model returned unexpected issue category");
         }
+
+        System.out.println("✅ Gemini analysis complete: " + issueResponse.getIssue());
 
         return issueResponse;
     }

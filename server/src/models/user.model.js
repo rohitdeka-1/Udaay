@@ -49,6 +49,14 @@ const userSchema = new mongoose.Schema({
     upvotesCount: {
         type: Number,
         default: 0
+    },
+    otp: {
+        type: String,
+        default: null
+    },
+    otpExpiry: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true

@@ -2,11 +2,17 @@ server:
   port: ${SERVER_PORT:5000}
 
 gemini:
-  project-id: ${GEMINI_PROJECT_ID}
-  location: ${GEMINI_LOCATION}
-  model: ${GEMINI_MODEL}
-  service-account-file: ${GEMINI_SERVICE_ACCOUNT_FILE}
+  project-id: ${GEMINI_PROJECT_ID:adroit-lock-485008-d6}
+  location: ${GEMINI_LOCATION:us-central1}
+  model: ${GEMINI_MODEL:gemini-2.0-flash}
+  service-account-file: ${GEMINI_SERVICE_ACCOUNT_FILE:./config/service-key.json}
 
 internal:
   jwt:
-    secret: ${INTERNAL_JWT_SECRET}
+    secret: ${INTERNAL_JWT_SECRET:e192dae9ed918288fa42a4a49f134e02}
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB

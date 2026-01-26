@@ -13,10 +13,14 @@ const INTERNAL_JWT_SECRET = config.INTERNAL_JWT_SECRET;
 
 const generateInternalJWT = () => {
     if (!INTERNAL_JWT_SECRET) {
+        console.error('❌ INTERNAL_JWT_SECRET is missing in .env file!');
         throw new Error('INTERNAL_JWT_SECRET is required for AI backend authentication');
     }
     
-    return jwt.sign(
+    console.log(`🔐 Generating internal JWT token...`);
+    console.log(`   - Secret length: ${INTERNAL_JWT_SECRET.length} chars`);
+    
+    const token = jwt.sign(
         { role: 'INTERNAL_SERVICE' },
         INTERNAL_JWT_SECRET,
         {
@@ -24,6 +28,9 @@ const generateInternalJWT = () => {
             expiresIn: '1h'
         }
     );
+    
+    console.log(`✅ JWT Generated: ${token.substring(0, 50)}...`);
+    return token;
 };
 
 /**
@@ -35,11 +42,14 @@ const generateInternalJWT = () => {
  */
 export const validateWithAIBackend = async (imageBuffer, imageName, mimeType) => {
     try {
-        console.log(' Preparing image for Spring Boot AI backend:');
-        console.log(`   - Image name: ${imageName}`);
+        console.log('\n🔄=================================================');
+        console.log('📤 CALLING SPRING BOOT AI BACKEND');
+        console.log('=================================================');
+        console.log(`📋 Image Details:`);
+        console.log(`   - Name: ${imageName}`);
         console.log(`   - MIME type: ${mimeType}`);
         console.log(`   - Buffer size: ${imageBuffer.length} bytes`);
-        console.log(`   - Buffer type: ${Buffer.isBuffer(imageBuffer) ? 'Valid Buffer' : 'INVALID - Not a Buffer!'}`);
+        console.log(`   - Valid Buffer: ${Buffer.isBuffer(imageBuffer) ? '✅ YES' : '❌ NO'}`);
         
         const formData = new FormData();
         formData.append('image', imageBuffer, {
@@ -48,10 +58,11 @@ export const validateWithAIBackend = async (imageBuffer, imageName, mimeType) =>
         });
 
         const jwtToken = generateInternalJWT();
-        console.log(`🔐 Generated JWT token (length: ${jwtToken.length} chars)`);
         
-        console.log(`🚀 Sending POST request to: ${AI_BACKEND_URL}/ai/verify`);
+        console.log(`\n🌐 Spring Boot AI Backend URL: ${AI_BACKEND_URL}/ai/verify`);
+        console.log(`🔐 Authorization: Bearer ${jwtToken.substring(0, 30)}...`);
         
+        console.log(`\n📤 Sending FormData with image...`);
         const response = await axios.post(
             `${AI_BACKEND_URL}/ai/verify`,
             formData,
@@ -66,26 +77,30 @@ export const validateWithAIBackend = async (imageBuffer, imageName, mimeType) =>
             }
         );
         
-        console.log('✅ Spring Boot AI backend response received:');
-        console.log(`   - Status: ${response.status}`);
-        console.log(`   - Data:`, JSON.stringify(response.data, null, 2));
+        console.log(`\n✅ Spring Boot Response Received:`);
+        console.log(`   - Status Code: ${response.status}`);
+        console.log(`   - Response Data:`, JSON.stringify(response.data, null, 2));
 
         return {
             success: true,
             data: response.data
         };
     } catch (error) {
-        console.error('❌ AI Backend validation error:', error.message);
+        console.error('\n❌=================================================');
+        console.error('❌ AI BACKEND VALIDATION FAILED');
+        console.error('=================================================');
+        console.error(`Error: ${error.message}`);
         
         if (error.response) {
-            console.error('   - Response status:', error.response.status);
-            console.error('   - Response data:', JSON.stringify(error.response.data, null, 2));
-            console.error('   - Response headers:', error.response.headers);
+            console.error(`\n📌 Response Status: ${error.response.status}`);
+            console.error(`📌 Response Data:`, JSON.stringify(error.response.data, null, 2));
+            console.error(`📌 Response Headers:`, error.response.headers);
         } else if (error.request) {
-            console.error('   - No response received from Spring Boot server');
-            console.error('   - Is the Spring Boot server running on', AI_BACKEND_URL, '?');
+            console.error(`\n❌ No response received from Spring Boot`);
+            console.error(`❌ Is Spring Boot running on ${AI_BACKEND_URL}?`);
+            console.error(`❌ Check: curl http://localhost:5000/actuator/health`);
         } else {
-            console.error('   - Error setting up request:', error.message);
+            console.error(`\n❌ Error setting up request:`, error.message);
         }
         
         return {

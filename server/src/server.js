@@ -12,14 +12,14 @@ const app = express();
 const PORT = config.PORT;
 const isProduction = config.NODE_ENV === 'production';
 
- const allowedOrigins = isProduction 
+const allowedOrigins = isProduction
     ? [config.CLIENT_URL, process.env.FRONTEND_URL].filter(Boolean)
     : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:8080', 'http://127.0.0.1:8081'];
 
 app.use(cors({
     origin: (origin, callback) => {
-         if (!origin) return callback(null, true);
-        
+        if (!origin) return callback(null, true);
+
         if (allowedOrigins.includes(origin) || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
             callback(null, true);
         } else {
@@ -84,7 +84,7 @@ app.use((err, req, res, next) => {
     if (!isProduction) {
         console.error(err.stack);
     }
-    
+
     res.status(err.status || 500).json({
         success: false,
         message: isProduction ? 'Internal server error' : err.message,
@@ -97,14 +97,29 @@ let server;
 try {
     await connectDb();
     console.log('✅ Database connected successfully');
-    
+
     server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\n${'🚀'.repeat(20)}`);
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📍 Environment: ${config.NODE_ENV}`);
         console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+
+        // Log JWT credentials
+        console.log(`\n🔐 SECURITY CONFIGURATION:`);
+        console.log(`   - JWT_SECRET: ${config.JWT_SECRET ? '✅ SET (' + config.JWT_SECRET.length + ' chars)' : '❌ MISSING'}`);
+        console.log(`   - INTERNAL_JWT_SECRET: ${config.INTERNAL_JWT_SECRET ? '✅ SET (' + config.INTERNAL_JWT_SECRET.length + ' chars)' : '❌ MISSING'}`);
+        console.log(`   - AI Backend URL: ${config.AI_BACKEND_URL || 'http://localhost:5000'}`);
+
+        // Log AI integration status
+        console.log(`\n🤖 AI INTEGRATION:`);
+        console.log(`   - Gemini Service: ✅ ENABLED (Direct)`);
+        console.log(`   - Spring Boot Fallback: ✅ ENABLED (${config.AI_BACKEND_URL || 'http://localhost:5000'})`);
+        console.log(`   - Google Cloud Project: ${config.GOOGLE_CLOUD_PROJECT_ID || 'Not configured'}`);
+
         if (!isProduction) {
-            console.log(`📡 API: http://localhost:${PORT}`);
+            console.log(`\n📡 API: http://localhost:${PORT}`);
         }
+        console.log(`${'🚀'.repeat(20)}\n`);
     });
 } catch (err) {
     console.error('Failed to start server:', err);
@@ -113,11 +128,11 @@ try {
 
 const gracefulShutdown = async (signal) => {
     console.log(`\n${signal} received. Starting graceful shutdown...`);
-    
+
     if (server) {
         server.close(async () => {
             console.log('✅ HTTP server closed');
-            
+
             try {
                 await import('mongoose').then(mongoose => mongoose.default.connection.close());
                 console.log('✅ Database connection closed');
@@ -127,7 +142,7 @@ const gracefulShutdown = async (signal) => {
                 process.exit(1);
             }
         });
-        
+
         setTimeout(() => {
             console.error('⚠️  Forced shutdown after timeout');
             process.exit(1);

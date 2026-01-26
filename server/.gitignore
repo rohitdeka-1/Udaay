@@ -3,6 +3,8 @@
 config/*.json
 src/config/*.json
 service-account-key.json
+service-key.json
 serviceAccountKey.json
 **/service-account-key.json
+**/service-key.json
 **/serviceAccountKey.json

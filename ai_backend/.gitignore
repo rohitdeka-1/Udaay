@@ -31,3 +31,15 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Service Account Keys (NEVER COMMIT) ###
+config/service-key.json
+config/service-account-key.json
+config/*-key.json
+**/service-key.json
+**/service-account-key.json
+### Service Account Keys (NEVER COMMIT) ###
+config/service-key.json
+config/service-account-key.json
+config/*-key.json
+*.json.bak
