@@ -184,8 +184,7 @@ jobs:
             echo ""
             echo "🏥 Health checks:"
             
-            # Check server health
-            if curl -f -s http:// (port 80)
+            # Check server health (port 80)
             if curl -f -s http://localhost:80/health > /dev/null 2>&1; then
               echo "✅ Server is healthy on port 80"
             else
@@ -199,6 +198,7 @@ jobs:
               echo "⚠️ Server health check failed on port 8080"
               echo "Server logs:"
               docker-compose logs --tail=30 server
+            fi
             
             # Check AI backend
             if curl -f -s http://localhost:5000/actuator/health > /dev/null 2>&1; then

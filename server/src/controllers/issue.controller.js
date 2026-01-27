@@ -481,6 +481,58 @@ export const upvoteIssue = async (req, res) => {
     }
 };
 
+export const updateIssueStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, severity } = req.body;
+
+        // Validate status
+        const validStatuses = ["pending", "live", "in-progress", "resolved", "rejected"];
+        if (status && !validStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid status value"
+            });
+        }
+
+        // Validate severity if provided
+        const validSeverities = ["low", "medium", "high", "critical"];
+        if (severity && !validSeverities.includes(severity)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid severity value"
+            });
+        }
+
+        const issue = await Issue.findById(id);
+
+        if (!issue) {
+            return res.status(404).json({
+                success: false,
+                message: "Issue not found"
+            });
+        }
+
+        // Update fields
+        if (status) issue.status = status;
+        if (severity) issue.severity = severity;
+
+        await issue.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Issue updated successfully",
+            data: { issue }
+        });
+    } catch (error) {
+        console.error("Error in updateIssueStatus:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+
  export const deleteIssue = async (req, res) => {
     try {
         const { id } = req.params;

@@ -5,6 +5,7 @@ import {
     getUserIssues,
     getIssueById,
     upvoteIssue,
+    updateIssueStatus,
     deleteIssue
 } from "../controllers/issue.controller.js";
 import { verifyToken } from "../middleware/auth.middleware.js";
@@ -23,6 +24,9 @@ router.get("/my-issues", verifyToken, getUserIssues);
 
 // Get issue by ID (public)
 router.get("/:id", getIssueById);
+
+// Update issue status/severity (protected - for officers)
+router.patch("/:id", verifyToken, updateIssueStatus);
 
 // Upvote issue (public)
 router.post("/:id/upvote", upvoteIssue);
