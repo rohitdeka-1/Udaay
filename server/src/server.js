@@ -18,8 +18,10 @@ const allowedOrigins = isProduction
         process.env.FRONTEND_URL,
         /^https:\/\/.*\.vercel\.app$/,
         'http://34.100.170.102',
-        'http://34.100.170.102:8080'
-      ].filter(Boolean)
+        'http://34.100.170.102:80',
+        'http://34.100.170.102:8080',
+        'https://udaay.vercel.app'
+      ].filter(val => val && val !== 'undefined')
     : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:8080', 'http://127.0.0.1:8081'];
 
 app.use(cors({
