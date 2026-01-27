@@ -59,7 +59,7 @@ const issueSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["pending", "live", "in-progress", "resolved", "rejected"],
+        enum: ["pending", "live", "in-progress", "awaiting-verification", "resolved", "rejected"],
         default: "pending"
     },
     aiValidation: {

@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import issueRoutes from "./routes/issue.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 const app = express();
 const PORT = config.PORT;
@@ -46,7 +47,7 @@ app.use(cors({
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Content-Length', 'X-Request-Id']
 }));
@@ -90,6 +91,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/issues", issueRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use((req, res) => {
     res.status(404).json({

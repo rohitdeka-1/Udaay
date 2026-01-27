@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Search, MapPin, AlertTriangle, Droplet, Trash2, Zap, FileText, X } from "lucide-react";
+import { Search, MapPin, AlertTriangle, Droplet, Trash2, Zap, FileText, X, CheckCircle2 } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -18,6 +18,8 @@ const getStatusBadge = (status: string) => {
       return "bg-green-500 text-white";
     case "in-progress":
       return "badge-progress";
+    case "awaiting-verification":
+      return "bg-amber-500 text-white";
     case "resolved":
       return "badge-resolved";
     default:
@@ -30,6 +32,8 @@ const HomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [liveIssues, setLiveIssues] = useState<any[]>([]);
+  const [resolvedIssues, setResolvedIssues] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"active" | "history">("active");
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
@@ -38,12 +42,20 @@ const HomeScreen = () => {
   useEffect(() => {
     const fetchIssues = async () => {
       try {
-        const url = `${getApiUrl()}/issues/live`;
+        const url = `${getApiUrl()}/issues/live?includeAll=true`;
         const response = await fetch(url);
         const data = await response.json();
 
         if (data.success) {
-          setLiveIssues(data.data.issues);
+          // Filter to show live, in-progress, and awaiting-verification issues (exclude resolved)
+          const activeIssues = data.data.issues.filter(
+            (issue: any) => issue.status === "live" || issue.status === "in-progress" || issue.status === "awaiting-verification"
+          );
+          const resolved = data.data.issues.filter(
+            (issue: any) => issue.status === "resolved"
+          );
+          setLiveIssues(activeIssues);
+          setResolvedIssues(resolved);
           setHasInitialLoad(true);
         }
       } catch (error) {
@@ -78,12 +90,20 @@ const HomeScreen = () => {
     if (userLocation && hasInitialLoad) {
       const fetchNearbyIssues = async () => {
         try {
-          const url = `${getApiUrl()}/issues/live?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=10000`;
+          const url = `${getApiUrl()}/issues/live?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=10000&includeAll=true`;
           const response = await fetch(url);
           const data = await response.json();
 
           if (data.success) {
-            setLiveIssues(data.data.issues);
+            // Filter to show live, in-progress, and awaiting-verification issues (exclude resolved)
+            const activeIssues = data.data.issues.filter(
+              (issue: any) => issue.status === "live" || issue.status === "in-progress" || issue.status === "awaiting-verification"
+            );
+            const resolved = data.data.issues.filter(
+              (issue: any) => issue.status === "resolved"
+            );
+            setLiveIssues(activeIssues);
+            setResolvedIssues(resolved);
           }
         } catch (error) {
           console.error("Error fetching nearby issues:", error);
@@ -175,11 +195,42 @@ const HomeScreen = () => {
           />
         </div>
 
+        {/* Tab Switcher */}
+        <div className="flex gap-2 border-b border-border">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors relative ${
+              activeTab === "active"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Active Issues ({liveIssues.length})
+            {activeTab === "active" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors relative ${
+              activeTab === "history"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            History ({resolvedIssues.length})
+            {activeTab === "history" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+        </div>
+
         {/* Active Issues Section */}
-        <div>
-          <h2 className="font-semibold text-lg text-foreground mb-3">
-            Active Issues
-          </h2>
+        {activeTab === "active" && (
+          <div>
+            <h2 className="font-semibold text-lg text-foreground mb-3">
+              Active Issues
+            </h2>
 
           {/* Filter Chips */}
           {activeFilters.length > 0 && (
@@ -265,7 +316,7 @@ const HomeScreen = () => {
                 </div>
               </div>
 
-              <h3 className="font-semibold text-lg text-foreground mb-2">No issues found</h3>
+              <h3 className="font-semibold text-lg text-foreground mb-2">No active issues found</h3>
               <p className="text-sm text-muted-foreground text-center mb-6 max-w-[250px]">
                 Try searching with different keywords or check back later.
               </p>
@@ -280,7 +331,63 @@ const HomeScreen = () => {
               )}
             </div>
           )}
-        </div>
+          </div>
+        )}
+
+        {/* History Section */}
+        {activeTab === "history" && (
+          <div>
+            <h2 className="font-semibold text-lg text-foreground mb-3">
+              Resolved Issues
+            </h2>
+
+            {resolvedIssues.length > 0 ? (
+              <div className="space-y-3">
+                {resolvedIssues.map((issue: any) => (
+                  <div
+                    key={issue._id}
+                    onClick={() => navigate(`/issues/${issue._id}`)}
+                    className="card-civic hover:shadow-md transition-all cursor-pointer active:scale-[0.98] border-l-4 border-l-green-500"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`${getStatusBadge(issue.status)} uppercase text-[10px] tracking-wider font-semibold px-2 py-1 rounded`}>
+                        {issue.status}
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="px-1 mt-2">
+                      <h3 className="font-semibold text-base text-foreground leading-snug line-clamp-2 mb-1">{issue.title}</h3>
+                      <p className="text-xs font-medium text-muted-foreground capitalize mb-1.5">{issue.category}</p>
+                      <div className="flex items-center gap-3 pb-1">
+                        {userLocation && (
+                          <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                            <MapPin size={13} strokeWidth={2.5} />
+                            {calculateDistance(userLocation.lat, userLocation.lng, issue.location.lat, issue.location.lng)} km
+                          </span>
+                        )}
+                        <p className="text-xs font-medium text-muted-foreground/80">{getTimeAgo(issue.createdAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 px-4">
+                <div className="relative mb-6">
+                  <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center">
+                    <CheckCircle2 size={40} className="text-green-500/40" />
+                  </div>
+                </div>
+
+                <h3 className="font-semibold text-lg text-foreground mb-2">No resolved issues</h3>
+                <p className="text-sm text-muted-foreground text-center max-w-[250px]">
+                  Resolved issues will appear here once they are verified and completed.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </MobileLayout>
   );

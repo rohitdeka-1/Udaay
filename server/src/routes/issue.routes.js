@@ -6,7 +6,9 @@ import {
     getIssueById,
     upvoteIssue,
     updateIssueStatus,
-    deleteIssue
+    deleteIssue,
+    verifyIssueResolution,
+    rejectIssueResolution
 } from "../controllers/issue.controller.js";
 import { verifyToken } from "../middleware/auth.middleware.js";
 import { uploadSingle } from "../middleware/upload.middleware.js";
@@ -25,11 +27,17 @@ router.get("/my-issues", verifyToken, getUserIssues);
 // Get issue by ID (public)
 router.get("/:id", getIssueById);
 
-// Update issue status/severity (protected - for officers)
-router.patch("/:id", verifyToken, updateIssueStatus);
+// Update issue status/severity (open for now - no authorization)
+router.patch("/:id", updateIssueStatus);
 
 // Upvote issue (public)
 router.post("/:id/upvote", upvoteIssue);
+
+// Verify issue resolution (citizen confirms it's fixed)
+router.post("/:id/verify", verifyIssueResolution);
+
+// Reject issue resolution (citizen says it's not fixed)
+router.post("/:id/reject", rejectIssueResolution);
 
 // Delete issue (protected - only owner can delete)
 router.delete("/:id", verifyToken, deleteIssue);

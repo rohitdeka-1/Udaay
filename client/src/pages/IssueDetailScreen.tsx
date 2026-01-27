@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapPin, Calendar, ArrowLeft, AlertTriangle, Trash2, Droplet, Zap, FileText } from "lucide-react";
+import { MapPin, Calendar, ArrowLeft, AlertTriangle, Trash2, Droplet, Zap, FileText, TrendingUp, CheckCircle2, XCircle } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { getApiUrl } from "@/lib/utils";
@@ -10,6 +10,10 @@ const IssueDetailScreen = () => {
   const navigate = useNavigate();
   const [issue, setIssue] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [upvoting, setUpvoting] = useState(false);
+  const [hasUpvoted, setHasUpvoted] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
 
@@ -116,6 +120,10 @@ const IssueDetailScreen = () => {
 
         if (data.success) {
           setIssue(data.data.issue);
+          
+          // Check if user has already upvoted (stored in localStorage)
+          const upvotedIssues = JSON.parse(localStorage.getItem('upvotedIssues') || '[]');
+          setHasUpvoted(upvotedIssues.includes(id));
         }
       } catch (error) {
         // Error fetching issue
@@ -127,12 +135,86 @@ const IssueDetailScreen = () => {
     fetchIssueDetail();
   }, [id]);
 
+  const handleUpvote = async () => {
+    if (upvoting || hasUpvoted) return;
+    
+    try {
+      setUpvoting(true);
+      const response = await fetch(`${getApiUrl()}/issues/${id}/upvote`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setIssue(data.data.issue);
+        setHasUpvoted(true);
+        
+        // Store upvote in localStorage
+        const upvotedIssues = JSON.parse(localStorage.getItem('upvotedIssues') || '[]');
+        upvotedIssues.push(id);
+        localStorage.setItem('upvotedIssues', JSON.stringify(upvotedIssues));
+      }
+    } catch (error) {
+      console.error('Error upvoting:', error);
+    } finally {
+      setUpvoting(false);
+    }
+  };
+
+  const handleVerifyResolution = async () => {
+    if (verifying) return;
+    
+    try {
+      setVerifying(true);
+      const response = await fetch(`${getApiUrl()}/issues/${id}/verify`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setIssue(data.data.issue);
+      }
+    } catch (error) {
+      console.error('Error verifying resolution:', error);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleRejectResolution = async () => {
+    if (rejecting) return;
+    
+    const reason = prompt('Why is this issue not resolved? (Optional)');
+    
+    try {
+      setRejecting(true);
+      const response = await fetch(`${getApiUrl()}/issues/${id}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setIssue(data.data.issue);
+      }
+    } catch (error) {
+      console.error('Error rejecting resolution:', error);
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "live":
         return "bg-green-500 text-white";
       case "in-progress":
         return "badge-progress";
+      case "awaiting-verification":
+        return "bg-yellow-500 text-white";
       case "resolved":
         return "badge-resolved";
       default:
@@ -243,6 +325,65 @@ const IssueDetailScreen = () => {
                 Category: <span className="font-semibold">{issue.category}</span>
               </p>
             </div>
+
+            {/* Upvote Button */}
+            <div className="card-civic">
+              <button
+                onClick={handleUpvote}
+                disabled={upvoting || hasUpvoted}
+                className={`w-full flex items-center justify-center gap-3 py-4 rounded-lg transition-all ${
+                  hasUpvoted 
+                    ? 'bg-primary/10 text-primary cursor-not-allowed' 
+                    : 'bg-primary/5 hover:bg-primary/10 text-primary active:scale-95'
+                }`}
+              >
+                <TrendingUp size={24} className={hasUpvoted ? 'text-primary' : ''} />
+                <div className="text-left">
+                  <p className="font-display font-bold text-2xl">{issue.upvotes || 0}</p>
+                  <p className="text-sm">
+                    {hasUpvoted ? 'Upvoted!' : upvoting ? 'Upvoting...' : 'Support this issue'}
+                  </p>
+                </div>
+              </button>
+              {hasUpvoted && (
+                <p className="text-xs text-center text-muted-foreground mt-2">
+                  Thank you for supporting this issue!
+                </p>
+              )}
+            </div>
+
+            {/* Verification Section - Only show if status is awaiting-verification and user is issue owner */}
+            {issue.status === 'awaiting-verification' && (() => {
+              const user = JSON.parse(localStorage.getItem('user') || '{}');
+              return user.userId === issue.userId._id || user._id === issue.userId._id;
+            })() && (
+              <div className="card-civic bg-yellow-500/5 border-2 border-yellow-500/20">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-lg text-foreground mb-2">Verify Resolution</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Our team has marked this issue as resolved. Please confirm if the issue has been fixed.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleVerifyResolution}
+                    disabled={verifying || rejecting}
+                    className="flex-1 btn-civic-primary py-3 gap-2"
+                  >
+                    <CheckCircle2 size={18} />
+                    {verifying ? 'Confirming...' : 'Yes, It\'s Fixed'}
+                  </button>
+                  <button
+                    onClick={handleRejectResolution}
+                    disabled={verifying || rejecting}
+                    className="flex-1 py-3 px-4 rounded-lg border-2 border-destructive/20 bg-destructive/5 hover:bg-destructive/10 text-destructive font-semibold transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <XCircle size={18} />
+                    {rejecting ? 'Reopening...' : 'Not Fixed'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Date */}
             <div className="card-civic flex items-center gap-3">

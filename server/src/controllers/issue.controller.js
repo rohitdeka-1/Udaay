@@ -1,4 +1,5 @@
 import Issue from "../models/issue.model.js";
+import Notification from "../models/notification.model.js";
 import { validateIssueWithAI, getLocationDetails } from "../services/ai.service.js";
 import { uploadToGCS, uploadBase64ToGCS, isGCSConfigured } from "../services/storage.service.js";
 import { validateWithAIBackend, mapAIResponse } from "../services/ai-backend.service.js";
@@ -343,9 +344,16 @@ async function validateAndUpdateIssue(issueId, imageUrl, description, category) 
  export const getLiveIssues = async (req, res) => {
     const startTime = Date.now();
     try {
-        const { lat, lng, radius = 10000, category } = req.query;  
+        const { lat, lng, radius = 10000, category, includeAll } = req.query;  
 
-        let query = { status: "live" };
+        let query = {};
+        
+        // If includeAll is true (for officer dashboard), include all active statuses
+        if (includeAll === 'true') {
+            query.status = { $in: ["live", "pending", "in-progress", "awaiting-verification", "resolved"] };
+        } else {
+            query.status = "live";
+        }
 
          if (category && category !== 'all') {
             query.category = category;
@@ -487,7 +495,7 @@ export const updateIssueStatus = async (req, res) => {
         const { status, severity } = req.body;
 
         // Validate status
-        const validStatuses = ["pending", "live", "in-progress", "resolved", "rejected"];
+        const validStatuses = ["pending", "live", "in-progress", "awaiting-verification", "resolved", "rejected"];
         if (status && !validStatuses.includes(status)) {
             return res.status(400).json({
                 success: false,
@@ -514,10 +522,42 @@ export const updateIssueStatus = async (req, res) => {
         }
 
         // Update fields
+        const oldStatus = issue.status;
         if (status) issue.status = status;
         if (severity) issue.severity = severity;
 
         await issue.save();
+
+        // Create notification if issue is marked as awaiting verification
+        if (status === "awaiting-verification" && oldStatus !== "awaiting-verification") {
+            try {
+                await Notification.create({
+                    userId: issue.userId,
+                    issueId: issue._id,
+                    type: "VERIFICATION_REQUIRED",
+                    message: `Your reported issue "${issue.title}" has been marked as resolved by our team. Please verify that the issue has been fixed.`,
+                    priority: "HIGH"
+                });
+            } catch (notifError) {
+                console.error("Error creating notification:", notifError);
+                // Don't fail the request if notification creation fails
+            }
+        }
+
+        // Create notification if issue is fully resolved (verified by citizen)
+        if (status === "resolved" && oldStatus !== "resolved") {
+            try {
+                await Notification.create({
+                    userId: issue.userId,
+                    issueId: issue._id,
+                    type: "RESOLVED",
+                    message: `Your reported issue "${issue.title}" has been fully resolved. Thank you for helping improve our community!`,
+                    priority: "HIGH"
+                });
+            } catch (notifError) {
+                console.error("Error creating notification:", notifError);
+            }
+        }
 
         res.status(200).json({
             success: true,
@@ -562,6 +602,111 @@ export const updateIssueStatus = async (req, res) => {
         });
     } catch (error) {
         console.error("Error in deleteIssue:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+
+// Verify issue resolution (citizen confirms the issue is resolved)
+export const verifyIssueResolution = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const issue = await Issue.findById(id);
+
+        if (!issue) {
+            return res.status(404).json({
+                success: false,
+                message: "Issue not found"
+            });
+        }
+
+        if (issue.status !== "awaiting-verification") {
+            return res.status(400).json({
+                success: false,
+                message: "Issue is not awaiting verification"
+            });
+        }
+
+        // Update status to resolved
+        issue.status = "resolved";
+        await issue.save();
+
+        // Create notification for resolution confirmation
+        try {
+            await Notification.create({
+                userId: issue.userId,
+                issueId: issue._id,
+                type: "RESOLVED",
+                message: `Thank you for confirming! Your issue "${issue.title}" is now fully resolved.`,
+                priority: "MEDIUM"
+            });
+        } catch (notifError) {
+            console.error("Error creating notification:", notifError);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Issue verified and resolved successfully",
+            data: { issue }
+        });
+    } catch (error) {
+        console.error("Error in verifyIssueResolution:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+
+// Reject issue resolution (citizen says issue is not fixed)
+export const rejectIssueResolution = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+
+        const issue = await Issue.findById(id);
+
+        if (!issue) {
+            return res.status(404).json({
+                success: false,
+                message: "Issue not found"
+            });
+        }
+
+        if (issue.status !== "awaiting-verification") {
+            return res.status(400).json({
+                success: false,
+                message: "Issue is not awaiting verification"
+            });
+        }
+
+        // Reopen the issue
+        issue.status = "in-progress";
+        await issue.save();
+
+        // Create notification for rejection
+        try {
+            await Notification.create({
+                userId: issue.userId,
+                issueId: issue._id,
+                type: "REOPENED",
+                message: `Your issue "${issue.title}" has been reopened as you indicated it was not fully resolved.${reason ? ` Reason: ${reason}` : ''}`,
+                priority: "HIGH"
+            });
+        } catch (notifError) {
+            console.error("Error creating notification:", notifError);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Issue reopened successfully",
+            data: { issue }
+        });
+    } catch (error) {
+        console.error("Error in rejectIssueResolution:", error);
         res.status(500).json({
             success: false,
             message: "Internal server error"
