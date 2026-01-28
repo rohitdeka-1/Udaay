@@ -40,7 +40,56 @@ const HomeScreen = () => {
 
    
   useEffect(() => {
-    const fetchIssues = async () => {
+    // Get user location first, then fetch issues
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(location);
+          // Fetch issues centered on user location
+          fetchIssuesForLocation(location);
+        },
+        (error) => {
+          // If location denied, fetch default Bhopal issues
+          console.log("Location access:", error.code === 1 ? "denied" : "unavailable");
+          fetchIssues();
+        },
+        { timeout: 5000, maximumAge: 60000 }
+      );
+    } else {
+      // No geolocation support, fetch default issues
+      fetchIssues();
+    }
+  }, []);
+
+  const fetchIssuesForLocation = async (location: { lat: number; lng: number }) => {
+    try {
+      const url = `${getApiUrl()}/issues/live?lat=${location.lat}&lng=${location.lng}&radius=10000&includeAll=true`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.success) {
+        const activeIssues = data.data.issues.filter(
+          (issue: any) => issue.status === "live" || issue.status === "in-progress" || issue.status === "awaiting-verification"
+        );
+        const resolved = data.data.issues.filter(
+          (issue: any) => issue.status === "resolved"
+        );
+        setLiveIssues(activeIssues);
+        setResolvedIssues(resolved);
+        setHasInitialLoad(true);
+      }
+    } catch (error) {
+      console.error("Error fetching issues:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchIssues = async () => {
       try {
         const url = `${getApiUrl()}/issues/live?includeAll=true`;
         const response = await fetch(url);
@@ -65,54 +114,7 @@ const HomeScreen = () => {
       }
     };
 
-    fetchIssues();
-  }, []);
-
-   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          // Silently handle location permission denial - app works without location
-          console.log("Location access:", error.code === 1 ? "denied" : "unavailable");
-        },
-        { timeout: 5000, maximumAge: 60000 }  
-      );
-    }
-  }, []);
-
-   useEffect(() => {
-    if (userLocation && hasInitialLoad) {
-      const fetchNearbyIssues = async () => {
-        try {
-          const url = `${getApiUrl()}/issues/live?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=10000&includeAll=true`;
-          const response = await fetch(url);
-          const data = await response.json();
-
-          if (data.success) {
-            // Filter to show live, in-progress, and awaiting-verification issues (exclude resolved)
-            const activeIssues = data.data.issues.filter(
-              (issue: any) => issue.status === "live" || issue.status === "in-progress" || issue.status === "awaiting-verification"
-            );
-            const resolved = data.data.issues.filter(
-              (issue: any) => issue.status === "resolved"
-            );
-            setLiveIssues(activeIssues);
-            setResolvedIssues(resolved);
-          }
-        } catch (error) {
-          console.error("Error fetching nearby issues:", error);
-        }
-      };
-
-      fetchNearbyIssues();
-    }
-  }, [userLocation, hasInitialLoad]);
+  // Removed duplicate geolocation and nearby fetch logic
 
   const filteredIssues = useMemo(() => {
     let filtered = liveIssues;

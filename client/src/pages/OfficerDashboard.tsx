@@ -134,9 +134,9 @@ const OfficerDashboard = () => {
       const response = await axios.get(`${API_URL}/issues/live?includeAll=true`);
       const allIssues = response.data.data?.issues || response.data.issues || [];
       
-      // Filter for live, pending and in-progress issues (exclude resolved)
+      // Filter for live, pending, in-progress and awaiting-verification issues (exclude resolved)
       const activeIssues = allIssues.filter(
-        (issue: Issue) => issue.status === "live" || issue.status === "pending" || issue.status === "in-progress"
+        (issue: Issue) => issue.status === "live" || issue.status === "pending" || issue.status === "in-progress" || issue.status === "awaiting-verification"
       );
       
       // Sort by severity: critical > high > medium > low
