@@ -2,7 +2,7 @@
 
 # Setup Let's Encrypt SSL for api.pencilpanda.in
 DOMAIN="api.pencilpanda.in"
-EMAIL="your-email@example.com"  # Update this with your email
+EMAIL="admin@pencilpanda.in"
 
 echo "================================================"
 echo "Setting up HTTPS for $DOMAIN"

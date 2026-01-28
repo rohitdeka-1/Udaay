@@ -21,6 +21,8 @@ const allowedOrigins = isProduction
         'http://34.100.170.102',
         'http://34.100.170.102:80',
         'http://34.100.170.102:8080',
+        'https://34.100.170.102',
+        'https://api.pencilpanda.in',
         'https://udaay.vercel.app'
       ].filter(val => val && val !== 'undefined')
     : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:8080', 'http://127.0.0.1:8081'];
@@ -67,6 +69,9 @@ app.use(cookieParser());
 // Enable request logging for all environments to aid debugging
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    if (req.body && Object.keys(req.body).length > 0) {
+        console.log('Request body:', JSON.stringify(req.body));
+    }
     next();
 });
 
