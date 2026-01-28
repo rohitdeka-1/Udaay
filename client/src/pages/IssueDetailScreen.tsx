@@ -70,12 +70,9 @@ const IssueDetailScreen = () => {
         map,
         title: issue.title,
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 15,
-          fillColor: getCategoryColorHex(issue.category),
-          fillOpacity: 0.9,
-          strokeColor: '#ffffff',
-          strokeWeight: 4,
+          url: `/marker-${issue.category}.png`,
+          scaledSize: new google.maps.Size(50, 50),
+          anchor: new google.maps.Point(25, 50),
         },
       });
 

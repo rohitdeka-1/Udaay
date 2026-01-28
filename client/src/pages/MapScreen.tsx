@@ -212,77 +212,15 @@ const MapScreen = () => {
       // Fetch live issues from API
       const issues = await fetchLiveIssues(location?.lat, location?.lng);
 
-      if (issues.length === 0) {
-        // Fallback to sample data if no live issues found
-        const sampleIssues = location
-          ? [
-              { lat: location.lat + 0.005, lng: location.lng + 0.005, title: "Pothole nearby", type: "roads" },
-              { lat: location.lat - 0.005, lng: location.lng + 0.007, title: "Garbage Overflow", type: "garbage" },
-              { lat: location.lat + 0.003, lng: location.lng - 0.005, title: "Street Light Issue", type: "electricity" },
-              { lat: location.lat - 0.007, lng: location.lng - 0.003, title: "Water Leakage", type: "water" },
-            ]
-          : [
-              { lat: 23.2599, lng: 77.4126, title: "Pothole on Main Road", type: "roads" },
-              { lat: 23.2650, lng: 77.4200, title: "Garbage Overflow", type: "garbage" },
-              { lat: 23.2550, lng: 77.4050, title: "Street Light Issue", type: "electricity" },
-              { lat: 23.2500, lng: 77.4150, title: "Water Leakage", type: "water" },
-            ];
-
-        sampleIssues.forEach((issue, index) => {
-          setTimeout(() => {
-            const marker = new google.maps.Marker({
-              position: { lat: issue.lat, lng: issue.lng },
-              map,
-              title: issue.title,
-              animation: google.maps.Animation.DROP,
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: getMarkerColor(issue.type),
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 2,
-              },
-            });
-
-            (marker as any).issueType = issue.type;
-            markersRef.current.push(marker);
-
-            const infoWindow = new google.maps.InfoWindow({
-              content: `<div style="padding: 12px; font-family: system-ui;">
-                <h3 style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">${issue.title}</h3>
-                <p style="font-size: 12px; color: #666; text-transform: capitalize;">${issue.type}</p>
-              </div>`
-            });
-
-            marker.addListener('click', () => {
-              marker.setAnimation(google.maps.Animation.BOUNCE);
-              setTimeout(() => marker.setAnimation(null), 700);
-              infoWindow.open(map, marker);
-            });
-          }, index * 150);
-        });
-        return;
-      }
-
       // Create markers for live issues from API
       issues.forEach((issue: any, index: number) => {
         setTimeout(() => {
-          // Use http/https image URL as marker icon if available (base64 won't work as marker icons)
-          const markerIcon = issue.imageUrl && (issue.imageUrl.startsWith('http://') || issue.imageUrl.startsWith('https://'))
-            ? {
-                url: issue.imageUrl,
-                scaledSize: new google.maps.Size(40, 40),
-                anchor: new google.maps.Point(20, 20),
-              }
-            : {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: getMarkerColor(issue.category),
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 2,
-              };
+          // Use custom PNG marker based on category
+          const markerIcon = {
+            url: `/marker-${issue.category}.png`,
+            scaledSize: new google.maps.Size(40, 40),
+            anchor: new google.maps.Point(20, 40),
+          };
 
           const marker = new google.maps.Marker({
             position: { lat: issue.location.lat, lng: issue.location.lng },
@@ -524,49 +462,6 @@ const MapScreen = () => {
             },
             title: "Your Location",
           }));
-          
-          // Add nearby issues using same helper function pattern
-          const nearbyIssues = [
-            { lat: location.lat + 0.005, lng: location.lng + 0.005, title: "Pothole nearby", type: "roads" },
-            { lat: location.lat - 0.005, lng: location.lng + 0.007, title: "Garbage Overflow", type: "garbage" },
-            { lat: location.lat + 0.003, lng: location.lng - 0.005, title: "Street Light Issue", type: "electricity" },
-            { lat: location.lat - 0.007, lng: location.lng - 0.003, title: "Water Leakage", type: "water" },
-          ];
-          
-          nearbyIssues.forEach((issue, index) => {
-            setTimeout(() => {
-              const marker = new google.maps.Marker({
-                position: { lat: issue.lat, lng: issue.lng },
-                map: googleMapRef.current,
-                title: issue.title,
-                animation: google.maps.Animation.DROP,
-                icon: {
-                  path: google.maps.SymbolPath.CIRCLE,
-                  scale: 10,
-                  fillColor: getMarkerColor(issue.type),
-                  fillOpacity: 1,
-                  strokeColor: '#ffffff',
-                  strokeWeight: 2,
-                },
-              });
-              
-              (marker as any).issueType = issue.type;
-              markersRef.current.push(marker);
-              
-              const infoWindow = new google.maps.InfoWindow({
-                content: `<div style="padding: 12px; font-family: system-ui;">
-                  <h3 style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">${issue.title}</h3>
-                  <p style="font-size: 12px; color: #666; text-transform: capitalize;">${issue.type}</p>
-                </div>`
-              });
-              
-              marker.addListener('click', () => {
-                marker.setAnimation(google.maps.Animation.BOUNCE);
-                setTimeout(() => marker.setAnimation(null), 700);
-                infoWindow.open(googleMapRef.current, marker);
-              });
-            }, index * 150);
-          });
         }
       },
       (error) => {

@@ -1,9 +1,9 @@
-import { Home, Plus, FileText, User, Map } from "lucide-react";
+import { Home, Plus, AlertCircle, User, Map, FileText } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
   { icon: Home, label: "Home", path: "/home" },
-  { icon: FileText, label: "Issues", path: "/issues" },
+  { icon: AlertCircle, label: "Issues", path: "/issues" },
   { icon: Plus, label: "Report", path: "/report", isFab: true },
   { icon: FileText, label: "Tickets", path: "/tickets" },
   { icon: User, label: "Profile", path: "/profile" },

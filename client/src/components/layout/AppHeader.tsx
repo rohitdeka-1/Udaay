@@ -22,8 +22,7 @@ export const AppHeader = ({ showCitySelector = false, title }: AppHeaderProps) =
    
     const storedUser = getStoredUser();
     setUser(storedUser);
-
-    // Listen for storage changes (when profile is updated)
+    
     const handleStorageChange = () => {
       const updatedUser = getStoredUser();
       setUser(updatedUser);
