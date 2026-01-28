@@ -39,6 +39,15 @@ export const initializeRecaptcha = (elementId: string) => {
  */
 export const sendOTP = async (phoneNumber: string) => {
   try {
+    // Test user bypass
+    if (phoneNumber === '+919876543210') {
+      console.log('🧪 TEST USER MODE: Using test phone number');
+      console.log('✅ Test OTP: 123456');
+      localStorage.setItem('tempPhone', phoneNumber);
+      localStorage.setItem('testUserMode', 'true');
+      return { success: true, message: 'Test OTP is 123456' };
+    }
+
     console.log(`📱 Sending OTP to ${phoneNumber}...`);
     console.log('⚠️ PROTOTYPE: Check server terminal/logs for OTP');
     
@@ -64,6 +73,41 @@ export const verifyOTP = async (otp: string) => {
     const phone = localStorage.getItem('tempPhone');
     if (!phone) {
       throw new Error('Phone number not found. Please request OTP again.');
+    }
+
+    // Test user bypass
+    const isTestUser = localStorage.getItem('testUserMode') === 'true';
+    if (isTestUser && phone === '+919876543210') {
+      if (otp === '123456') {
+        console.log('🧪 TEST USER MODE: Login successful');
+        
+        // Create test user data
+        const testUserData = {
+          success: true,
+          data: {
+            token: 'test_token_' + Date.now(),
+            user: {
+              _id: 'test_user_id',
+              userId: 'test_user_id',
+              name: 'Test User',
+              phone: phone,
+              email: 'testuser@example.com',
+              role: 'citizen'
+            }
+          }
+        };
+
+        // Store test user data
+        localStorage.setItem('token', testUserData.data.token);
+        localStorage.setItem('user', JSON.stringify(testUserData.data.user));
+        localStorage.removeItem('tempPhone');
+        localStorage.removeItem('testUserMode');
+
+        console.log('✅ Test user logged in successfully!');
+        return testUserData;
+      } else {
+        throw new Error('Invalid test OTP. Use 123456');
+      }
     }
 
     console.log(`🔐 Verifying OTP for ${phone}...`);
