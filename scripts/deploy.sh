@@ -22,6 +22,7 @@ if ! command -v docker-compose &> /dev/null; then
 fi
 
 # Check if .env file exists
+//rhd
 if [ ! -f .env ]; then
     echo -e "${RED}❌ .env file not found${NC}"
     exit 1
