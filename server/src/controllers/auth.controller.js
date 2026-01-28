@@ -2,33 +2,190 @@ import admin, { firebaseInitialized } from "../config/firebase.config.js";
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 
+// Store OTP data in memory (in production, use Redis)
+const otpStore = {};
+
+const generateOTP = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+export const sendOTP = async (req, res) => {
+    try {
+        console.log('\n🔵 sendOTP endpoint hit');
+        console.log('📦 Request body:', req.body);
+        
+        // Accept both 'phone' and 'phoneNumber' for compatibility
+        const phone = req.body?.phone || req.body?.phoneNumber;
+        console.log('📱 Phone value:', phone);
+
+        if (!phone) {
+            console.log('❌ NO PHONE PROVIDED');
+            return res.status(400).json({
+                success: false,
+                message: "Phone number is required"
+            });
+        }
+
+        const otp = generateOTP();
+        const expiryTime = Date.now() + 10 * 60 * 1000;
+
+        otpStore[phone] = {
+            otp,
+            expiryTime,
+            attempts: 0
+        };
+
+        console.log(`\n===========================================`);
+        console.log(`⚠️  PROTOTYPE MODE - OTP AUTHENTICATION`);
+        console.log(`===========================================`);
+        console.log(`📱 Phone: ${phone}`);
+        console.log(`🔐 OTP Code: ${otp}`);
+        console.log(`⏰ Expires in: 10 minutes`);
+        console.log(`⚠️  This OTP is logged for testing only!`);
+        console.log(`===========================================\n`);
+
+        res.status(200).json({
+            success: true,
+            message: "OTP sent successfully to your phone",
+            data: {
+                phone,
+                expiresIn: "10 minutes"
+            }
+        });
+
+    } catch (error) {
+        console.error("Send OTP error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error during OTP send",
+            error: error.message
+        });
+    }
+};
+
+export const verifyOTP = async (req, res) => {
+    try {
+        const { phone, otp } = req.body;
+
+        if (!phone || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Phone number and OTP are required"
+            });
+        }
+
+        // Check if OTP exists
+        if (!otpStore[phone]) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP not found. Please request a new OTP"
+            });
+        }
+
+        const storedOTPData = otpStore[phone];
+
+        // Check if OTP is expired
+        if (Date.now() > storedOTPData.expiryTime) {
+            delete otpStore[phone];
+            return res.status(400).json({
+                success: false,
+                message: "OTP expired. Please request a new OTP"
+            });
+        }
+
+        // Check if OTP matches
+        if (storedOTPData.otp !== otp) {
+            storedOTPData.attempts += 1;
+            if (storedOTPData.attempts >= 3) {
+                delete otpStore[phone];
+                return res.status(400).json({
+                    success: false,
+                    message: "Too many failed attempts. Please request a new OTP"
+                });
+            }
+            return res.status(400).json({
+                success: false,
+                message: `Invalid OTP. Attempts remaining: ${3 - storedOTPData.attempts}`
+            });
+        }
+
+        // OTP is valid - clear it
+        delete otpStore[phone];
+
+        // Find or create user
+        let user = await User.findOne({ phone });
+
+        if (!user) {
+            user = await User.create({
+                name: "User",
+                phone,
+                email: `${phone}@lakecity.local`,
+                authProvider: "phone",
+                role: "citizen",
+                isVerified: true
+            });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            {
+                userId: user._id,
+                role: user.role,
+                email: user.email
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: "30d" }
+        );
+
+        user.lastLogin = new Date();
+        await user.save();
+
+        console.log(`✅ User logged in via OTP: ${phone}`);
+
+        res.status(200).json({
+            success: true,
+            message: "Login successful",
+            data: {
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    role: user.role,
+                    authProvider: user.authProvider
+                },
+                token,
+                expiresIn: "30d"
+            }
+        });
+
+    } catch (error) {
+        console.error("Verify OTP error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error during OTP verification",
+            error: error.message
+        });
+    }
+};
+
 export const loginWithFirebase = async (req, res) => {
     try {
         const { idToken, phone, name, email } = req.body;
 
         let decodedToken;
-
-        // DEV MODE: Allow phone-based login without Firebase token
-        // This works whether Firebase is initialized or not, for development/testing
-        if (phone && (!idToken || idToken === '' || idToken === null || idToken === undefined)) {
-            console.log("DEV MODE: Bypassing Firebase verification - phone login");
-
-            decodedToken = {
-                uid: `dev_${phone}`,
-                phone_number: phone,
-                email: email || `${phone}@dev.com`,
-                name: name || "Test User"
-            };
-        } else if (!firebaseInitialized) {
+        
+        if (!firebaseInitialized) {
+            // Fallback to dev mode only if Firebase is not initialized
             console.log("DEV MODE: Firebase not initialized");
-
+            
             if (!phone) {
                 return res.status(400).json({
                     success: false,
                     message: "Phone number is required in dev mode"
                 });
             }
-
+            
             decodedToken = {
                 uid: `dev_${phone}`,
                 phone_number: phone,
@@ -36,6 +193,7 @@ export const loginWithFirebase = async (req, res) => {
                 name: name || "Test User"
             };
         } else {
+            // Firebase is initialized - require idToken
             if (!idToken) {
                 return res.status(400).json({
                     success: false,
@@ -56,7 +214,7 @@ export const loginWithFirebase = async (req, res) => {
 
         const { uid, phone_number, email: fbEmail, name: fbName } = decodedToken;
 
-        let user = await User.findOne({
+        let user = await User.findOne({ 
             $or: [
                 { email: fbEmail || email },
                 { phone: phone_number || phone }
@@ -74,8 +232,8 @@ export const loginWithFirebase = async (req, res) => {
         }
 
         const token = jwt.sign(
-            {
-                userId: user._id,
+            { 
+                userId: user._id, 
                 role: user.role,
                 email: user.email
             },
@@ -113,11 +271,7 @@ export const loginWithFirebase = async (req, res) => {
     }
 };
 
-// Simple in-memory OTP storage (for development)
-// In production, use Redis or database
-const otpStorage = new Map();
-
-export const sendOTP = async (req, res) => {
+export const verifyPhoneNumber = async (req, res) => {
     try {
         const { phoneNumber } = req.body;
 
@@ -128,135 +282,20 @@ export const sendOTP = async (req, res) => {
             });
         }
 
-        // Generate 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-        // Store OTP with 5 minute expiration
-        otpStorage.set(phoneNumber, {
-            otp,
-            expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
-        });
-
-        // In development, log the OTP
-        console.log(`📱 OTP for ${phoneNumber}: ${otp}`);
-
-        // In production, send SMS here
-        // await sendSMS(phoneNumber, `Your OTP is: ${otp}`);
-
         res.status(200).json({
             success: true,
-            message: "OTP sent successfully",
-            // In development, return OTP in response
-            ...(process.env.NODE_ENV === 'development' && { otp })
+            message: "OTP sent successfully. Verify on client side with Firebase."
         });
 
     } catch (error) {
-        console.error("Send OTP error:", error);
+        console.error("Phone verification error:", error);
         res.status(500).json({
             success: false,
-            message: "Server error during OTP send",
+            message: "Server error during phone verification",
             error: error.message
         });
     }
 };
-
-export const verifyOTP = async (req, res) => {
-    try {
-        const { phoneNumber, otp, name, email } = req.body;
-
-        if (!phoneNumber || !otp) {
-            return res.status(400).json({
-                success: false,
-                message: "Phone number and OTP are required"
-            });
-        }
-
-        // Check if OTP exists
-        const storedData = otpStorage.get(phoneNumber);
-
-        if (!storedData) {
-            return res.status(400).json({
-                success: false,
-                message: "No OTP found. Please request a new one."
-            });
-        }
-
-        // Check if OTP expired
-        if (Date.now() > storedData.expiresAt) {
-            otpStorage.delete(phoneNumber);
-            return res.status(400).json({
-                success: false,
-                message: "OTP has expired. Please request a new one."
-            });
-        }
-
-        // Verify OTP
-        if (storedData.otp !== otp) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid OTP. Please try again."
-            });
-        }
-
-        // OTP is valid, delete it
-        otpStorage.delete(phoneNumber);
-
-        // Find or create user
-        let user = await User.findOne({ phone: phoneNumber });
-
-        if (!user) {
-            user = await User.create({
-                name: name || "User",
-                email: email || `${phoneNumber.replace(/\D/g, '')}@user.com`,
-                phone: phoneNumber,
-                authProvider: "phone",
-                role: "citizen"
-            });
-        }
-
-        // Generate JWT token
-        const token = jwt.sign(
-            {
-                userId: user._id,
-                role: user.role,
-                email: user.email
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: "30d" }
-        );
-
-        user.lastLogin = new Date();
-        await user.save();
-
-        res.status(200).json({
-            success: true,
-            message: "Login successful",
-            data: {
-                user: {
-                    id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                    role: user.role,
-                    authProvider: user.authProvider
-                },
-                token,
-                expiresIn: "30d"
-            }
-        });
-
-    } catch (error) {
-        console.error("Verify OTP error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Server error during OTP verification",
-            error: error.message
-        });
-    }
-};
-
-// Keep old function name for compatibility
-export const verifyPhoneNumber = sendOTP;
 
 export const getCurrentUser = async (req, res) => {
     try {
