@@ -324,28 +324,43 @@ const IssueDetailScreen = () => {
             </div>
 
             {/* Upvote Button */}
-            <div className="card-civic">
+            <div className="card-civic-elevated overflow-hidden">
               <button
                 onClick={handleUpvote}
                 disabled={upvoting || hasUpvoted}
-                className={`w-full flex items-center justify-center gap-3 py-4 rounded-lg transition-all ${
+                className={`w-full flex items-center gap-4 p-5 transition-all ${
                   hasUpvoted 
-                    ? 'bg-primary/10 text-primary cursor-not-allowed' 
-                    : 'bg-primary/5 hover:bg-primary/10 text-primary active:scale-95'
+                    ? 'bg-gradient-to-r from-primary/10 to-primary/5 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-primary/5 to-transparent hover:from-primary/10 hover:to-primary/5 active:scale-[0.98]'
                 }`}
               >
-                <TrendingUp size={24} className={hasUpvoted ? 'text-primary' : ''} />
-                <div className="text-left">
-                  <p className="font-display font-bold text-2xl">{issue.upvotes || 0}</p>
-                  <p className="text-sm">
-                    {hasUpvoted ? 'Upvoted!' : upvoting ? 'Upvoting...' : 'Support this issue'}
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all ${
+                  hasUpvoted 
+                    ? 'bg-primary shadow-lg shadow-primary/30' 
+                    : 'bg-primary/10'
+                }`}>
+                  <TrendingUp size={32} className={hasUpvoted ? 'text-white' : 'text-primary'} strokeWidth={2.5} />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-display font-bold text-3xl text-foreground mb-1">{issue.upvotes || 0}</p>
+                  <p className={`text-sm font-medium ${
+                    hasUpvoted ? 'text-primary' : 'text-muted-foreground'
+                  }`}>
+                    {hasUpvoted ? '✓ You upvoted this' : upvoting ? 'Upvoting...' : 'People supporting'}
                   </p>
                 </div>
+                {!hasUpvoted && (
+                  <div className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
+                    Upvote
+                  </div>
+                )}
               </button>
               {hasUpvoted && (
-                <p className="text-xs text-center text-muted-foreground mt-2">
-                  Thank you for supporting this issue!
-                </p>
+                <div className="px-5 pb-4 pt-2">
+                  <p className="text-xs text-center text-primary/80 font-medium">
+                    🎉 Thank you for supporting this issue!
+                  </p>
+                </div>
               )}
             </div>
 

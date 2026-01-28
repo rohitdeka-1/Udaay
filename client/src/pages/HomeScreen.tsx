@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Search, MapPin, AlertTriangle, Droplet, Trash2, Zap, FileText, X, CheckCircle2 } from "lucide-react";
+import { Search, MapPin, AlertTriangle, Droplet, Trash2, Zap, FileText, X, CheckCircle2, TrendingUp } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -293,14 +293,20 @@ const HomeScreen = () => {
                   <div className="px-1">
                     <h3 className="font-semibold text-base text-foreground leading-snug line-clamp-2 mb-1">{issue.title}</h3>
                     <p className="text-xs font-medium text-muted-foreground capitalize mb-1.5">{issue.category}</p>
-                    <div className="flex items-center gap-3 pb-1">
-                      {userLocation && (
-                        <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                          <MapPin size={13} strokeWidth={2.5} />
-                          {calculateDistance(userLocation.lat, userLocation.lng, issue.location.lat, issue.location.lng)} km
-                        </span>
-                      )}
-                      <p className="text-xs font-medium text-muted-foreground/80">{getTimeAgo(issue.createdAt)}</p>
+                    <div className="flex items-center justify-between gap-3 pb-1">
+                      <div className="flex items-center gap-3">
+                        {userLocation && (
+                          <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                            <MapPin size={13} strokeWidth={2.5} />
+                            {calculateDistance(userLocation.lat, userLocation.lng, issue.location.lat, issue.location.lng)} km
+                          </span>
+                        )}
+                        <p className="text-xs font-medium text-muted-foreground/80">{getTimeAgo(issue.createdAt)}</p>
+                      </div>
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10">
+                        <TrendingUp size={12} className="text-primary" strokeWidth={2.5} />
+                        <span className="text-xs font-bold text-primary">{issue.upvotes || 0}</span>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -214,6 +214,13 @@ const LoginScreen = () => {
                   </>
                 )}
               </button>
+
+              <button
+                onClick={() => navigate('/home')}
+                className="w-full py-3 mt-3 text-center text-muted-foreground hover:text-foreground transition-colors font-medium"
+              >
+                ← Go Home
+              </button>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-6">

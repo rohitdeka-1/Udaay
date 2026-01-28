@@ -222,32 +222,41 @@ const ReportScreen = () => {
         {/* Step 2: Issue Details */}
         {step === 2 && (
           <div className="animate-fade-in">
-            <div className="text-center mb-6">
-              <h2 className="font-display font-semibold text-xl mb-1">Issue Details</h2>
-              <p className="text-muted-foreground text-sm">Provide information about the issue</p>
-            </div>
-
-            {/* Image Preview */}
-            <div className="relative mb-6">
-              <img
-                src={image || ""}
-                alt="Issue"
-                className="w-full h-48 object-cover rounded-2xl"
-              />
-              <button
-                onClick={() => {
-                  setImage(null);
-                  setStep(1);
-                }}
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center"
-              >
-                <X size={16} />
-              </button>
+            {/* Image Preview Card */}
+            <div className="card-civic-elevated mb-6 overflow-hidden">
+              <div className="relative">
+                <img
+                  src={image || ""}
+                  alt="Issue"
+                  className="w-full h-56 object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                <button
+                  onClick={() => {
+                    setImage(null);
+                    setStep(1);
+                  }}
+                  className="absolute top-3 right-3 w-9 h-9 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center shadow-lg hover:bg-background transition-colors"
+                >
+                  <X size={18} />
+                </button>
+                <div className="absolute bottom-3 left-3 right-3">
+                  <h2 className="font-display font-bold text-xl text-white drop-shadow-lg mb-1">
+                    Tell us what happened
+                  </h2>
+                  <p className="text-white/90 text-sm drop-shadow">Help us understand the issue better</p>
+                </div>
+              </div>
             </div>
 
             {/* Category Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-3">Issue Category</label>
+            <div className="card-civic-elevated p-5 mb-5">
+              <label className="flex items-center gap-2 text-sm font-semibold mb-4">
+                <div className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center">
+                  <AlertTriangle size={12} className="text-primary" />
+                </div>
+                Issue Category
+              </label>
               <div className="grid grid-cols-2 gap-3">
                 {categories.map((cat) => (
                   <button
@@ -255,65 +264,94 @@ const ReportScreen = () => {
                     onClick={() => setCategory(cat.id)}
                     className={`p-4 rounded-xl border-2 transition-all ${
                       category === cat.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/30"
+                        ? "border-primary bg-primary/5 shadow-sm shadow-primary/20"
+                        : "border-border hover:border-primary/40"
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-xl ${cat.color} flex items-center justify-center mb-2`}>
-                      <cat.icon size={20} />
+                    <div className={`w-11 h-11 rounded-xl ${cat.color} flex items-center justify-center mb-2.5 mx-auto`}>
+                      <cat.icon size={22} />
                     </div>
-                    <p className="text-sm font-medium text-foreground">{cat.label}</p>
+                    <p className={`text-sm font-semibold ${category === cat.id ? 'text-primary' : 'text-foreground'}`}>
+                      {cat.label}
+                    </p>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Title */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Title *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Brief title of the issue..."
-                className="input-civic"
-              />
-            </div>
+            {/* Title & Description Card */}
+            <div className="card-civic-elevated p-5 mb-5">
+              <div className="mb-5">
+                <label className="flex items-center gap-2 text-sm font-semibold mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Issue Title
+                  <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g., Large pothole on Main Street"
+                  className="w-full px-4 py-3.5 rounded-xl border-2 border-border bg-muted/30 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all text-base font-medium"
+                />
+              </div>
 
-            {/* Description */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Description *</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the issue in detail..."
-                className="input-civic min-h-[100px] resize-none"
-              />
-            </div>
-
-            {/* Location */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Location</label>
-              <div className="w-full input-civic text-left flex items-center gap-2">
-                <MapPin size={18} className="text-primary" />
-                <span className="text-sm">{locationName}</span>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Description
+                  <span className="text-destructive">*</span>
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe the issue in detail - when did you notice it, how severe is it, any safety concerns..."
+                  className="w-full px-4 py-3.5 rounded-xl border-2 border-border bg-muted/30 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all min-h-[120px] resize-none text-base"
+                />
               </div>
             </div>
 
-            {/* Submit */}
+            {/* Location Card */}
+            <div className="card-civic-elevated p-5 mb-6">
+              <label className="flex items-center gap-2 text-sm font-semibold mb-3">
+                <MapPin size={16} className="text-primary" />
+                Location
+              </label>
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <MapPin size={20} className="text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground mb-0.5">Current Location</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed break-words">{locationName}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="btn-civic-primary w-full py-4 text-base flex items-center justify-center gap-2"
+              disabled={isSubmitting || !title.trim() || !description.trim()}
+              className="btn-civic-primary w-full py-4 text-base font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>
                   <Sparkles size={20} className="animate-spin" />
-                  <span>Submitting & AI Validating...</span>
+                  <span>Submitting & Validating...</span>
                 </>
               ) : (
-                <span>Submit Report</span>
+                <>
+                  <Check size={20} />
+                  <span>Submit Issue Report</span>
+                </>
               )}
+            </button>
+            
+            <button
+              onClick={() => setStep(1)}
+              className="w-full py-3 mt-3 text-center text-muted-foreground hover:text-foreground transition-colors font-medium"
+            >
+              ← Change Photo
             </button>
           </div>
         )}
@@ -341,14 +379,14 @@ const ReportScreen = () => {
             </div>
 
             <button
-              onClick={() => navigate("/tickets")}
+              onClick={() => navigate("/tickets?tab=pending")}
               className="btn-civic-primary w-full py-4 text-base mb-3"
             >
               Track My Ticket
             </button>
 
             <button
-              onClick={() => navigate("/tickets")}
+              onClick={() => navigate("/tickets?tab=pending")}
               className="w-full py-3 text-primary font-medium"
             >
               View My Tickets

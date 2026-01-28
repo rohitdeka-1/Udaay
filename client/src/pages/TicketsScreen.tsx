@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, Plus, ChevronRight, Clock, AlertCircle, Check, Trash2 } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/utils";
@@ -37,7 +37,10 @@ interface Issue {
 }
 
 const TicketsScreen = () => {
-  const [activeTab, setActiveTab] = useState("live");
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || "live");
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
