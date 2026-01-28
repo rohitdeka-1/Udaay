@@ -323,42 +323,81 @@ const IssueDetailScreen = () => {
               </p>
             </div>
 
-            {/* Upvote Button */}
+            {/* Mobile-Optimized Upvote Section */}
             <div className="card-civic-elevated overflow-hidden">
+              {/* Stats Row */}
+              <div className="p-4 border-b border-border/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Community Support</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="font-display font-bold text-4xl text-foreground">{issue.upvotes || 0}</p>
+                      <p className="text-sm font-medium text-muted-foreground">upvotes</p>
+                    </div>
+                  </div>
+                  {hasUpvoted && (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <CheckCircle2 size={24} className="text-primary" />
+                      </div>
+                      <p className="text-[10px] font-semibold text-primary">Upvoted</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Upvote Button - Large Touch Target */}
               <button
                 onClick={handleUpvote}
                 disabled={upvoting || hasUpvoted}
-                className={`w-full flex items-center gap-4 p-5 transition-all ${
+                className={`w-full py-5 px-6 transition-all duration-200 ${
                   hasUpvoted 
-                    ? 'bg-gradient-to-r from-primary/10 to-primary/5 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-primary/5 to-transparent hover:from-primary/10 hover:to-primary/5 active:scale-[0.98]'
+                    ? 'bg-gradient-to-r from-primary/5 to-transparent cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/15 hover:to-primary/10 active:scale-[0.97]'
                 }`}
               >
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all ${
-                  hasUpvoted 
-                    ? 'bg-primary shadow-lg shadow-primary/30' 
-                    : 'bg-primary/10'
-                }`}>
-                  <TrendingUp size={32} className={hasUpvoted ? 'text-white' : 'text-primary'} strokeWidth={2.5} />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-display font-bold text-3xl text-foreground mb-1">{issue.upvotes || 0}</p>
-                  <p className={`text-sm font-medium ${
-                    hasUpvoted ? 'text-primary' : 'text-muted-foreground'
+                <div className="flex items-center justify-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                    hasUpvoted 
+                      ? 'bg-primary/10' 
+                      : 'bg-primary shadow-lg shadow-primary/20'
                   }`}>
-                    {hasUpvoted ? '✓ You upvoted this' : upvoting ? 'Upvoting...' : 'People supporting'}
-                  </p>
-                </div>
-                {!hasUpvoted && (
-                  <div className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
-                    Upvote
+                    <TrendingUp 
+                      size={24} 
+                      className={hasUpvoted ? 'text-primary/50' : 'text-white'} 
+                      strokeWidth={2.5} 
+                    />
                   </div>
-                )}
+                  <div className="text-left">
+                    <p className={`font-bold text-lg ${
+                      hasUpvoted ? 'text-primary' : 'text-foreground'
+                    }`}>
+                      {hasUpvoted ? 'Thanks for your support!' : upvoting ? 'Adding your vote...' : 'Upvote this Issue'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {hasUpvoted ? "You've already upvoted" : 'Help bring attention to this'}
+                    </p>
+                  </div>
+                </div>
               </button>
-              {hasUpvoted && (
-                <div className="px-5 pb-4 pt-2">
-                  <p className="text-xs text-center text-primary/80 font-medium">
-                    🎉 Thank you for supporting this issue!
+
+              {/* Progress Indicator */}
+              {issue.upvotes > 0 && (
+                <div className="px-6 pb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-muted-foreground">Impact Level</p>
+                    <p className="text-xs font-bold text-primary">
+                      {issue.upvotes < 10 ? 'Low' : issue.upvotes < 50 ? 'Medium' : 'High'}
+                    </p>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-primary to-success transition-all duration-500"
+                      style={{ width: `${Math.min((issue.upvotes / 100) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground text-center mt-2">
+                    {issue.upvotes < 100 ? `${100 - issue.upvotes} more votes to reach high priority` : 'High priority issue!'}
                   </p>
                 </div>
               )}
