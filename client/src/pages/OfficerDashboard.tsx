@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CheckCircle2, Clock, MapPin, TrendingUp, ChevronRight, Play, LayoutDashboard, FileText, BarChart3, User, AlertCircle, Filter, X } from "lucide-react";
+import { Bell, CheckCircle2, Clock, MapPin, TrendingUp, ChevronRight, Play, LayoutDashboard, FileText, BarChart3, User, AlertCircle, Filter, X, Download } from "lucide-react";
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 interface Issue {
   _id: string;
@@ -133,21 +133,21 @@ const OfficerDashboard = () => {
       setLoading(true);
       const response = await axios.get(`${API_URL}/issues/live?includeAll=true`);
       const allIssues = response.data.data?.issues || response.data.issues || [];
-      
+
       // Filter for live, pending, in-progress and awaiting-verification issues (exclude resolved)
       const activeIssues = allIssues.filter(
         (issue: Issue) => issue.status === "live" || issue.status === "pending" || issue.status === "in-progress" || issue.status === "awaiting-verification"
       );
-      
+
       // Sort by severity: critical > high > medium > low
       const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
       activeIssues.sort((a: Issue, b: Issue) => {
         return severityOrder[a.severity] - severityOrder[b.severity];
       });
-      
+
       setIssues(activeIssues);
       setFilteredIssues(activeIssues);
-      
+
       // Get recent issues (last 24 hours) for notifications
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const recent = allIssues
@@ -155,11 +155,11 @@ const OfficerDashboard = () => {
         .sort((a: Issue, b: Issue) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 10);
       setRecentIssues(recent);
-      
+
       // Calculate stats
       const pendingCount = allIssues.filter((i: Issue) => i.status === "pending" || i.status === "live").length;
       const inProgressCount = allIssues.filter((i: Issue) => i.status === "in-progress").length;
-      const resolvedCount = allIssues.filter((i: Issue) => 
+      const resolvedCount = allIssues.filter((i: Issue) =>
         i.status === "resolved" || i.status === "awaiting-verification"
       ).length;
       const total = pendingCount + inProgressCount + resolvedCount;
@@ -191,10 +191,10 @@ const OfficerDashboard = () => {
       await axios.patch(`${API_URL}/issues/${issueId}`, {
         status: "in-progress"
       });
-      
+
       // Refresh issues to update the UI
       await fetchIssues();
-      
+
       // Switch to Tasks tab to show the in-progress issue
       setActiveNav("Tasks");
     } catch (error) {
@@ -206,11 +206,103 @@ const OfficerDashboard = () => {
     const now = new Date();
     const created = new Date(date);
     const diffInHours = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) return "Just now";
     if (diffInHours < 24) return `${diffInHours}h ago`;
     const diffInDays = Math.floor(diffInHours / 24);
     return `${diffInDays}d ago`;
+  };
+
+  const downloadReport = async () => {
+    let loadingToast: HTMLDivElement | null = null;
+
+    try {
+      // Show loading toast
+      loadingToast = document.createElement('div');
+      loadingToast.className = 'fixed top-4 right-4 bg-primary text-primary-foreground px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
+      loadingToast.innerHTML = `
+        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Generating CSV Report...</span>
+      `;
+      document.body.appendChild(loadingToast);
+
+      // Call backend API to generate CSV
+      const response = await axios.post(`${API_URL}/officer/generate-report`, {
+        officerName: user?.name || 'Municipal Officer'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        responseType: 'blob' // Important for file download
+      });
+
+      // Remove loading toast
+      if (loadingToast && document.body.contains(loadingToast)) {
+        document.body.removeChild(loadingToast);
+        loadingToast = null;
+      }
+
+      // Create download link for CSV
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Udaay_Issue_Report_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      // Show success toast
+      const successToast = document.createElement('div');
+      successToast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
+      successToast.innerHTML = `
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span class="font-medium">CSV Report Downloaded Successfully!</span>
+      `;
+      document.body.appendChild(successToast);
+
+      // Auto-remove toast after 5 seconds
+      setTimeout(() => {
+        if (document.body.contains(successToast)) {
+          document.body.removeChild(successToast);
+        }
+      }, 5000);
+    } catch (error: any) {
+      console.error('Error generating report:', error);
+
+      // Ensure loading toast is removed on error
+      try {
+        if (loadingToast && document.body.contains(loadingToast)) {
+          document.body.removeChild(loadingToast);
+          loadingToast = null;
+        }
+      } catch (removeError) {
+        console.error('Error removing loading toast:', removeError);
+      }
+
+      // Show error toast
+      const errorToast = document.createElement('div');
+      errorToast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
+      errorToast.innerHTML = `
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        <span>Failed to generate report. Please try again.</span>
+      `;
+      document.body.appendChild(errorToast);
+
+      setTimeout(() => {
+        if (document.body.contains(errorToast)) {
+          document.body.removeChild(errorToast);
+        }
+      }, 7000);
+    }
   };
 
   return (
@@ -219,15 +311,15 @@ const OfficerDashboard = () => {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <img 
-              src="/logo_png.png" 
-              alt="Udaay" 
+            <img
+              src="/logo_png.png"
+              alt="Udaay"
               className="h-10 w-10 object-contain"
             />
             <span className="font-display font-semibold">Udaay Officer</span>
           </div>
           <div className="relative" ref={notificationRef}>
-            <button 
+            <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2 rounded-full hover:bg-muted transition-colors"
             >
@@ -245,14 +337,14 @@ const OfficerDashboard = () => {
                     <h3 className="font-semibold text-foreground">New Issues</h3>
                     <p className="text-xs text-muted-foreground">{recentIssues.length} new in last 24h</p>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setShowNotifications(false)}
                     className="p-1 hover:bg-muted rounded-full transition-colors"
                   >
                     <X size={16} className="text-muted-foreground" />
                   </button>
                 </div>
-                
+
                 {recentIssues.length === 0 ? (
                   <div className="px-4 py-8 text-center">
                     <Bell size={32} className="mx-auto text-muted-foreground mb-2" />
@@ -263,7 +355,7 @@ const OfficerDashboard = () => {
                     {recentIssues.map((issue) => {
                       const priorityColors = getPriorityColor(issue.severity);
                       return (
-                        <div 
+                        <div
                           key={issue._id}
                           onClick={() => {
                             setShowNotifications(false);
@@ -326,7 +418,7 @@ const OfficerDashboard = () => {
                   <p className="text-xs text-muted-foreground mt-1">Pending</p>
                 </div>
               </div>
-              
+
               <div className="card-civic-elevated">
                 <div className="text-center">
                   <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center mx-auto mb-2">
@@ -336,7 +428,7 @@ const OfficerDashboard = () => {
                   <p className="text-xs text-muted-foreground mt-1">In Progress</p>
                 </div>
               </div>
-              
+
               <div className="card-civic-elevated">
                 <div className="text-center">
                   <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center mx-auto mb-2">
@@ -354,7 +446,7 @@ const OfficerDashboard = () => {
                 <h2 className="font-display font-semibold text-lg">Active Issues</h2>
                 <div className="flex items-center gap-2">
                   <Filter size={16} className="text-muted-foreground" />
-                  <select 
+                  <select
                     value={filter}
                     onChange={(e) => setFilter(e.target.value as any)}
                     className="text-sm bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -382,8 +474,8 @@ const OfficerDashboard = () => {
                   {filteredIssues.map((issue) => {
                     const priorityColors = getPriorityColor(issue.severity);
                     return (
-                      <div 
-                        key={issue._id} 
+                      <div
+                        key={issue._id}
                         className="card-civic-elevated hover:shadow-lg transition-shadow cursor-pointer"
                         onClick={() => setSelectedIssue(issue)}
                       >
@@ -423,7 +515,7 @@ const OfficerDashboard = () => {
                               {issue.upvotes} upvotes
                             </span>
                           </div>
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleStartWork(issue._id);
@@ -445,14 +537,40 @@ const OfficerDashboard = () => {
 
         {activeNav === "Stats" && (
           <>
-            {/* Stats Header */}
+            {/* Stats Header with Download Button */}
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h1 className="font-display font-bold text-2xl text-foreground mb-1">
+                  Performance Statistics
+                </h1>
+                <p className="text-muted-foreground">
+                  Detailed insights and analytics for your department
+                </p>
+              </div>
+            </div>
+
+            {/* Download Report Card */}
             <div className="mb-6">
-              <h1 className="font-display font-bold text-2xl text-foreground mb-1">
-                Performance Statistics
-              </h1>
-              <p className="text-muted-foreground">
-                Detailed insights and analytics for your department
-              </p>
+              <div className="card-civic-elevated bg-gradient-to-br from-primary/5 to-success/5 border-2 border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <BarChart3 size={24} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">Download Full Report</p>
+                      <p className="text-xs text-muted-foreground">Export all statistics as CSV file</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={downloadReport}
+                    className="btn-civic-primary py-2 px-4 gap-2"
+                  >
+                    <Download size={18} />
+                    Export
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Overall Performance */}
@@ -464,7 +582,7 @@ const OfficerDashboard = () => {
                   <span className="font-display font-bold text-2xl text-foreground">{stats.efficiency}%</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-gradient-to-r from-primary to-success transition-all duration-300"
                     style={{ width: `${stats.efficiency}%` }}
                   />
@@ -505,7 +623,7 @@ const OfficerDashboard = () => {
                               <span className="text-sm text-muted-foreground">{count} issues ({percentage}%)</span>
                             </div>
                             <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                              <div 
+                              <div
                                 className="h-full bg-primary transition-all duration-300"
                                 style={{ width: `${percentage}%` }}
                               />
@@ -556,7 +674,7 @@ const OfficerDashboard = () => {
                   </div>
                   <span className="font-display font-bold text-xl text-foreground">{stats.pending}</span>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-3 bg-blue-500/5 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -569,7 +687,7 @@ const OfficerDashboard = () => {
                   </div>
                   <span className="font-display font-bold text-xl text-foreground">{stats.inProgress}</span>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-3 bg-green-500/5 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
@@ -612,7 +730,7 @@ const OfficerDashboard = () => {
                   {issues.filter(i => i.status === "in-progress").map((issue) => {
                     const priorityColors = getPriorityColor(issue.severity);
                     return (
-                      <div 
+                      <div
                         key={issue._id}
                         onClick={() => setSelectedIssue(issue)}
                         className="card-civic-elevated hover:shadow-lg transition-shadow cursor-pointer"
@@ -650,7 +768,7 @@ const OfficerDashboard = () => {
                   {issues.filter(i => i.status === "awaiting-verification").map((issue) => {
                     const priorityColors = getPriorityColor(issue.severity);
                     return (
-                      <div 
+                      <div
                         key={issue._id}
                         onClick={() => setSelectedIssue(issue)}
                         className="card-civic-elevated hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-amber-500"
@@ -703,7 +821,7 @@ const OfficerDashboard = () => {
             {/* Modal Header */}
             <div className="sticky top-0 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
               <h2 className="font-display font-semibold text-lg">Issue Details</h2>
-              <button 
+              <button
                 onClick={() => setSelectedIssue(null)}
                 className="p-2 hover:bg-muted rounded-full transition-colors"
               >
@@ -721,11 +839,10 @@ const OfficerDashboard = () => {
                 <span className="text-xs px-3 py-1.5 rounded bg-muted text-muted-foreground uppercase">
                   {selectedIssue.category}
                 </span>
-                <span className={`text-xs px-3 py-1.5 rounded uppercase flex items-center gap-1 ${
-                  selectedIssue.status === 'in-progress' ? 'bg-blue-500/10 text-blue-500' :
+                <span className={`text-xs px-3 py-1.5 rounded uppercase flex items-center gap-1 ${selectedIssue.status === 'in-progress' ? 'bg-blue-500/10 text-blue-500' :
                   selectedIssue.status === 'resolved' || selectedIssue.status === 'awaiting-verification' ? 'bg-green-500/10 text-green-500' :
-                  'bg-yellow-500/10 text-yellow-500'
-                }`}>
+                    'bg-yellow-500/10 text-yellow-500'
+                  }`}>
                   {selectedIssue.status === 'in-progress' && <Play size={12} />}
                   {(selectedIssue.status === 'resolved' || selectedIssue.status === 'awaiting-verification') && <CheckCircle2 size={12} />}
                   {selectedIssue.status === 'pending' && <Clock size={12} />}
@@ -742,8 +859,8 @@ const OfficerDashboard = () => {
               {/* Image */}
               {selectedIssue.imageUrl && (
                 <div className="rounded-lg overflow-hidden">
-                  <img 
-                    src={selectedIssue.imageUrl} 
+                  <img
+                    src={selectedIssue.imageUrl}
                     alt={selectedIssue.title}
                     className="w-full h-auto object-cover"
                   />
@@ -787,7 +904,7 @@ const OfficerDashboard = () => {
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-border">
                 {selectedIssue.status !== 'in-progress' && selectedIssue.status !== 'awaiting-verification' && selectedIssue.status !== 'resolved' && (
-                  <button 
+                  <button
                     onClick={async () => {
                       await handleStartWork(selectedIssue._id);
                       setSelectedIssue(null);
@@ -799,7 +916,7 @@ const OfficerDashboard = () => {
                   </button>
                 )}
                 {selectedIssue.status === 'in-progress' && (
-                  <button 
+                  <button
                     onClick={async () => {
                       try {
                         await axios.patch(`${API_URL}/issues/${selectedIssue._id}`, {
@@ -817,7 +934,7 @@ const OfficerDashboard = () => {
                     Mark as Resolved
                   </button>
                 )}
-                <button 
+                <button
                   onClick={() => setSelectedIssue(null)}
                   className="px-6 py-3 rounded-lg border border-border hover:bg-muted transition-colors"
                 >

@@ -8,6 +8,7 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import issueRoutes from "./routes/issue.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import officerRoutes from "./routes/officer.routes.js";
 
 const app = express();
 const PORT = config.PORT;
@@ -15,7 +16,7 @@ const isProduction = config.NODE_ENV === 'production';
 
 const allowedOrigins = isProduction
     ? [
-        config.CLIENT_URL, 
+        config.CLIENT_URL,
         process.env.FRONTEND_URL,
         /^https:\/\/.*\.vercel\.app$/,
         'http://34.100.170.102',
@@ -24,7 +25,7 @@ const allowedOrigins = isProduction
         'https://34.100.170.102',
         'https://api.pencilpanda.in',
         'https://udaay.vercel.app'
-      ].filter(val => val && val !== 'undefined')
+    ].filter(val => val && val !== 'undefined')
     : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:8080', 'http://127.0.0.1:8081'];
 
 app.use(cors({
@@ -66,7 +67,6 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 
-// Enable request logging for all environments to aid debugging
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     if (req.body && Object.keys(req.body).length > 0) {
@@ -97,6 +97,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/issues", issueRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/officer", officerRoutes);
 
 app.use((req, res) => {
     res.status(404).json({

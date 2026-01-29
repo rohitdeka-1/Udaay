@@ -36,6 +36,7 @@ const LoginScreen = () => {
         variant: "destructive",
         title: "Invalid Phone Number",
         description: "Please enter a valid 10-digit phone number",
+        duration: 7000,
       });
       return;
     }
@@ -56,12 +57,13 @@ const LoginScreen = () => {
         toast({
           title: "🔐 Prototype OTP",
           description: `Your OTP is: ${response.data.prototypeOTP}`,
-          duration: 10000, // Show for 10 seconds
+          duration: 7000,
         });
       } else {
         toast({
           title: "OTP Sent!",
           description: "Check server console for OTP (Prototype Mode)",
+          duration: 7000,
         });
       }
     } catch (error: any) {
@@ -70,6 +72,7 @@ const LoginScreen = () => {
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to send OTP. Please try again.",
+        duration: 7000,
       });
     } finally {
       setLoading(false);
@@ -101,6 +104,7 @@ const LoginScreen = () => {
       toast({
         title: "Login Successful!",
         description: `Welcome, ${response.data.user.name}!`,
+        duration: 7000,
       });
 
       setTimeout(() => navigate(from, { replace: true }), 500);
@@ -110,6 +114,7 @@ const LoginScreen = () => {
         variant: "destructive",
         title: "Verification Failed",
         description: error.message || "Invalid OTP. Please try again.",
+        duration: 7000,
       });
       // Reset OTP inputs on error
       setOtp(["", "", "", "", "", ""]);
@@ -130,6 +135,7 @@ const LoginScreen = () => {
       toast({
         title: "OTP Resent",
         description: "A new verification code has been sent to your phone",
+        duration: 7000,
       });
     } catch (error: any) {
       console.error("Resend OTP error:", error);
@@ -137,6 +143,7 @@ const LoginScreen = () => {
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to resend OTP. Please try again.",
+        duration: 7000,
       });
     } finally {
       setIsResending(false);
