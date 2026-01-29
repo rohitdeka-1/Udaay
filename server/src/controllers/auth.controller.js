@@ -138,7 +138,6 @@ export const verifyOTP = async (req, res) => {
             });
         }
 
-        // Check if OTP exists
         if (!otpStore[phone]) {
             return res.status(400).json({
                 success: false,
