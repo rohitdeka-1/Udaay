@@ -45,7 +45,11 @@ export const sendOTP = async (phoneNumber: string) => {
       console.log('✅ Test OTP: 123456');
       localStorage.setItem('tempPhone', phoneNumber);
       localStorage.setItem('testUserMode', 'true');
-      return { success: true, message: 'Test OTP is 123456' };
+      return { 
+        success: true, 
+        message: 'Test OTP is 123456',
+        data: { prototypeOTP: '123456' }
+      };
     }
 
     console.log(`📱 Sending OTP to ${phoneNumber}...`);
@@ -56,7 +60,9 @@ export const sendOTP = async (phoneNumber: string) => {
     });
 
     console.log('✅ OTP sent successfully!');
-    console.log('🔍 Check your server console/terminal for the OTP code');
+    if (response.data.data?.prototypeOTP) {
+      console.log('🔍 Prototype OTP:', response.data.data.prototypeOTP);
+    }
     
     return response.data;
   } catch (error: any) {
@@ -81,14 +87,14 @@ export const verifyOTP = async (otp: string) => {
       if (otp === '123456') {
         console.log('🧪 TEST USER MODE: Login successful');
         
-        // Create test user data
+        // Create test user data with valid MongoDB ObjectId
         const testUserData = {
           success: true,
           data: {
             token: 'test_token_' + Date.now(),
             user: {
-              _id: 'test_user_id',
-              userId: 'test_user_id',
+              _id: '507f1f77bcf86cd799439011',
+              userId: '507f1f77bcf86cd799439011',
               name: 'Test User',
               phone: phone,
               email: 'testuser@example.com',

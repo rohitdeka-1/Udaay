@@ -26,6 +26,26 @@ export const sendOTP = async (req, res) => {
             });
         }
 
+        // Test user bypass
+        if (phone === '+919876543210') {
+            console.log('🧪 TEST USER MODE: Phone +919876543210 detected');
+            otpStore[phone] = {
+                otp: '123456',
+                expiryTime: Date.now() + 10 * 60 * 1000,
+                attempts: 0
+            };
+            
+            return res.status(200).json({
+                success: true,
+                message: "Test user OTP is always 123456",
+                data: {
+                    phone,
+                    expiresIn: "10 minutes",
+                    prototypeOTP: '123456' // For frontend toast
+                }
+            });
+        }
+
         const otp = generateOTP();
         const expiryTime = Date.now() + 10 * 60 * 1000;
 
@@ -49,7 +69,8 @@ export const sendOTP = async (req, res) => {
             message: "OTP sent successfully to your phone",
             data: {
                 phone,
-                expiresIn: "10 minutes"
+                expiresIn: "10 minutes",
+                prototypeOTP: otp // Return OTP for frontend toast
             }
         });
 
@@ -71,6 +92,49 @@ export const verifyOTP = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Phone number and OTP are required"
+            });
+        }
+
+        // Test user bypass
+        if (phone === '+919876543210' && otp === '123456') {
+            console.log('🧪 TEST USER MODE: Test credentials verified');
+            
+            let user = await User.findOne({ phone });
+            if (!user) {
+                user = await User.create({
+                    name: "Test User",
+                    phone,
+                    email: "testuser@lakecity.local",
+                    authProvider: "phone",
+                    role: "citizen",
+                    isVerified: true
+                });
+            }
+
+            const token = jwt.sign(
+                { userId: user._id, role: user.role, email: user.email },
+                process.env.JWT_SECRET,
+                { expiresIn: "30d" }
+            );
+
+            user.lastLogin = new Date();
+            await user.save();
+
+            return res.status(200).json({
+                success: true,
+                message: "Test user login successful",
+                data: {
+                    user: {
+                        id: user._id,
+                        name: user.name,
+                        email: user.email,
+                        phone: user.phone,
+                        role: user.role,
+                        authProvider: user.authProvider
+                    },
+                    token,
+                    expiresIn: "30d"
+                }
             });
         }
 

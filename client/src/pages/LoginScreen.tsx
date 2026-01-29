@@ -47,13 +47,23 @@ const LoginScreen = () => {
       // Store phone temporarily for OTP verification
       localStorage.setItem('tempPhone', formattedPhone);
       
-      await sendOTP(formattedPhone);
+      const response = await sendOTP(formattedPhone);
 
       setShowOtp(true);
-      toast({
-        title: "OTP Sent!",
-        description: "Check server console for OTP (Prototype Mode)",
-      });
+      
+      // Show OTP in toast for prototype mode
+      if (response.data?.prototypeOTP) {
+        toast({
+          title: "🔐 Prototype OTP",
+          description: `Your OTP is: ${response.data.prototypeOTP}`,
+          duration: 10000, // Show for 10 seconds
+        });
+      } else {
+        toast({
+          title: "OTP Sent!",
+          description: "Check server console for OTP (Prototype Mode)",
+        });
+      }
     } catch (error: any) {
       console.error("Send OTP error:", error);
       toast({
